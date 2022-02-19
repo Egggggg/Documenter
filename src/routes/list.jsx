@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import MDEditor from "@uiw/react-md-editor";
+import Card from "react-bootstrap/Card";
+import Container from "react-bootstrap/Container";
 
 export default function List(props) {
 	const [items, setItems] = useState([]);
@@ -9,7 +11,7 @@ export default function List(props) {
 			.find({
 				limit: 10,
 				include_docs: true,
-				selector: { _id: { $regex: "^(?!_design).+" } }
+				selector: { type: "document" }
 			})
 			.then((results) => {
 				setItems(results.docs);
@@ -17,20 +19,32 @@ export default function List(props) {
 	}, [props.db]);
 
 	return (
-		<div id="results">
+		<Container>
 			{items.map((item) => {
 				return (
-					<div className="item">
-						<h2>{item.name}</h2>
-						<ul>
-							{item.tags.forEach((tag) => {
-								<li>{tag}</li>;
-							})}
-						</ul>
-						<MDEditor.Markdown source={item.text} />
-					</div>
+					<>
+						<Card>
+							<Card.Body>
+								<Card.Title>{item.name}</Card.Title>
+								<Card.Text>
+									{item.tags.length > 0 && (
+										<div id="tags">
+											<h3>Tags</h3>
+											<ul>
+												{item.tags.map((tag) => {
+													return <li key={tag}>{tag}</li>;
+												})}
+											</ul>
+										</div>
+									)}
+									<MDEditor.Markdown source={item.text} />
+								</Card.Text>
+							</Card.Body>
+						</Card>
+						<br />
+					</>
 				);
 			})}
-		</div>
+		</Container>
 	);
 }

@@ -1,47 +1,75 @@
 import MDEditor from "@uiw/react-md-editor";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Creator(props) {
 	const [mdValue, setMdValue] = useState("# Boy howdy!");
 	const [nameValue, setNameValue] = useState("Default Name");
+
 	const [tagValue, setTagValue] = useState("");
 	const [tags, setTags] = useState([]);
 
-	const save = async () => {
+	const [allCollections, setAllCollections] = useState([]);
+	const [collections, setCollections] = useState([]);
+
+	useEffect(() => {
+		props.db.find({ selector: { type: "collection" } }).then((results) => {
+			setAllCollections(
+				results.docs.map((row) => {
+					return row._id;
+				})
+			);
+		});
+	});
+
+	const save = () => {
 		const data = {
 			_id: new Date().toJSON(),
+			collections: collections,
 			name: nameValue,
 			tags: tags,
-			text: mdValue
+			text: mdValue,
+			type: "document"
 		};
 
-		await props.db.put(data);
+		props.db.put(data);
 	};
 
-	const addTag = () => {
-		console.log(tags);
-
+	const addTag = (e) => {
+		e.preventDefault();
 		setTags([...tags, tagValue]);
 		setTagValue("");
-
-		console.log(tags);
 	};
 
-	const setTagValueWrapper = (e) => {
-		console.log(e.target.value);
+	const tagValueChange = (e) => {
 		setTagValue(e.target.value);
 	};
 
-	const setNameValueWrapper = (e) => {
+	const nameValueChange = (e) => {
 		setNameValue(e.target.value);
+	};
+
+	const toggleCollection = (e) => {
+		const index = collections.indexOf(e.target.value);
+
+		if (index === -1) {
+			setCollections([...collections, e.target.value]);
+		} else {
+			const newCollections = collections.filter(
+				(value) => value === e.target.value
+			);
+
+			setCollections(newCollections);
+		}
 	};
 
 	return (
 		<div className="creator">
-			<input type="text" value={nameValue} onChange={setNameValueWrapper} />
+			<input type="text" value={nameValue} onChange={nameValueChange} />
 			<MDEditor value={mdValue} onChange={setMdValue} />
-			<button onClick={addTag}>+</button>
-			<input type="text" value={tagValue} onChange={setTagValueWrapper} />
+			<form onSubmit={addTag}>
+				<input type="submit" value="+" />
+				<input type="text" value={tagValue} onChange={tagValueChange} />
+			</form>
 			<ul>
 				{tags.map((tag) => {
 					return (
@@ -52,6 +80,22 @@ export default function Creator(props) {
 					);
 				})}
 			</ul>
+			<details>
+				<summary>Collections</summary>
+				{allCollections.map((name) => {
+					return (
+						<div key={name}>
+							<input
+								type="checkbox"
+								name={name}
+								value={name}
+								onChange={toggleCollection}
+							/>
+							<label for={name}>{name}</label>
+						</div>
+					);
+				})}
+			</details>
 			<button onClick={save}>Create</button>
 		</div>
 	);
