@@ -7,7 +7,6 @@ export default function Collections(props) {
 
 	useEffect(() => {
 		props.db.find({ selector: { type: "collection" } }).then((results) => {
-			console.log(results);
 			setCollections(results.docs.map((row) => row._id));
 		});
 	}, [props.db]);
@@ -43,7 +42,7 @@ export default function Collections(props) {
 							<LinkContainer
 								to={`/list?collection=${encodeURIComponent(collection)}`}
 							>
-								<button>{collection}</button>
+								<span>{collection}</span>
 							</LinkContainer>
 						</li>
 					);
