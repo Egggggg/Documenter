@@ -6,12 +6,10 @@ export default function Collections(props) {
 	const [newValue, setNewValue] = useState("");
 
 	useEffect(() => {
-		props.db
-			.find({ limit: 10, selector: { type: "collection" } })
-			.then((results) => {
-				console.log(results);
-				setCollections(results.docs.map((row) => row._id));
-			});
+		props.db.find({ selector: { type: "collection" } }).then((results) => {
+			console.log(results);
+			setCollections(results.docs.map((row) => row._id));
+		});
 	}, [props.db]);
 
 	const addCollection = (e) => {
@@ -42,7 +40,9 @@ export default function Collections(props) {
 				{collections.map((collection) => {
 					return (
 						<li key={collection}>
-							<LinkContainer to={`/collections/${collection}`}>
+							<LinkContainer
+								to={`/list?collection=${encodeURIComponent(collection)}`}
+							>
 								<button>{collection}</button>
 							</LinkContainer>
 						</li>

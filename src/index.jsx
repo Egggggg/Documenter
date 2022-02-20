@@ -7,6 +7,7 @@ import App from "./routes/app";
 import Creator from "./routes/creator";
 import List from "./routes/list";
 import Collections from "./routes/collections";
+import Collection from "./routes/collection";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -29,7 +30,7 @@ db.createIndex({
 	})
 	.then(() => {
 		db.createIndex({
-			index: { fields: ["type"] }
+			index: { fields: ["name"] }
 		});
 	});
 
@@ -41,6 +42,10 @@ ReactDOM.render(
 					<Route path="create" element={<Creator db={db} />} />
 					<Route path="list" element={<List db={db} />} />
 					<Route path="collections" element={<Collections db={db} />} />
+					<Route
+						path="collection/:collection"
+						element={<Collection db={db} />}
+					/>
 				</Route>
 			</Routes>
 		</BrowserRouter>

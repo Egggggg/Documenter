@@ -32,6 +32,10 @@ export default function Creator(props) {
 		};
 
 		props.db.put(data);
+		setMdValue("# Boy howdy!");
+		setNameValue("Default Name");
+		setTags([]);
+		setCollections([]);
 	};
 
 	const addTag = (e) => {
@@ -91,7 +95,7 @@ export default function Creator(props) {
 								value={name}
 								onChange={toggleCollection}
 							/>
-							<label for={name}>{name}</label>
+							<label htmlFor={name}>{name}</label>
 						</div>
 					);
 				})}
