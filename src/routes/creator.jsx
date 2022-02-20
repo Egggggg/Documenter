@@ -1,6 +1,8 @@
 import MDEditor from "@uiw/react-md-editor";
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Navigate } from "react-router-dom";
+
+import ListGroup from "react-bootstrap/ListGroup";
 
 export default function Creator(props) {
 	const [mdValue, setMdValue] = useState("# Boy howdy!");
@@ -11,6 +13,8 @@ export default function Creator(props) {
 
 	const [{ search }] = useState(useLocation());
 	const [id, setId] = useState(null);
+
+	const [redirect, setRedirect] = useState(false);
 
 	useEffect(() => {
 		const params = new URLSearchParams(search);
@@ -28,7 +32,7 @@ export default function Creator(props) {
 	const save = () => {
 		if (id !== null) {
 			props.db.get(id).then((doc) => {
-				return props.db.put({
+				props.db.put({
 					_id: id,
 					_rev: doc._rev,
 					name: nameValue,
@@ -53,12 +57,15 @@ export default function Creator(props) {
 		setNameValue("Default Name");
 		setTags([]);
 
-		window.history.replaceState(null, null, "/create");
+		setRedirect(true);
 	};
 
 	const addTag = (e) => {
 		e.preventDefault();
-		setTags([...tags, tagValue]);
+		if (!tags.includes(tagValue)) {
+			setTags([...tags, tagValue]);
+		}
+
 		setTagValue("");
 	};
 
@@ -77,24 +84,22 @@ export default function Creator(props) {
 
 	return (
 		<div className="creator">
+			{redirect && <Navigate to="/" />}
 			<input type="text" value={nameValue} onChange={nameValueChange} />
 			<MDEditor value={mdValue} onChange={setMdValue} />
 			<form onSubmit={addTag}>
 				<input type="submit" value="+" />
 				<input type="text" value={tagValue} onChange={tagValueChange} />
 			</form>
-			<ul>
+			<ListGroup>
 				{tags.map((tag) => {
 					return (
-						<div className="tag" key={tag}>
-							<li onClick={deleteTag(tag)} role="button">
-								{tag}
-							</li>
-							<br />
-						</div>
+						<ListGroup.Item action key={tag} onClick={deleteTag(tag)}>
+							{tag}
+						</ListGroup.Item>
 					);
 				})}
-			</ul>
+			</ListGroup>
 			<button onClick={save}>Create</button>
 		</div>
 	);

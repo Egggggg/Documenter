@@ -1,58 +1,59 @@
 import { useState, useEffect } from "react";
-import { useLocation, Navigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import MDEditor from "@uiw/react-md-editor";
+import Mustache from "mustache";
 
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Container from "react-bootstrap/Container";
+import ListGroup from "react-bootstrap/ListGroup";
 
 export default function List(props) {
 	const [items, setItems] = useState([]);
-	const [tags, setTags] = useState([]);
-	const [{ search }] = useState(useLocation());
 	const [redirect, setRedirect] = useState(null);
+	const [vars, setVars] = useState({});
+
+	const [filterValue, setFilterValue] = useState("");
+	const [filters, setFilters] = useState([]);
 
 	useEffect(() => {
-		const params = new URLSearchParams(search);
-		const tagsParam = params.get("tags");
-
-		try {
-			setTags(JSON.parse(tagsParam));
-		} catch (err) {
-			setTags(tagsParam);
-		}
-	}, [search]);
+		props.db
+			.find({
+				include_docs: true,
+				selector: { type: "var" }
+			})
+			.then((results) => {
+				setVars(
+					Object.fromEntries(
+						results.docs.map((doc) => {
+							return [doc._id, doc.value];
+						})
+					)
+				);
+			});
+	}, [props.db]);
 
 	useEffect(() => {
 		const selector = {
 			type: "document"
 		};
 
-		if (typeof tags === "string") {
+		if (filters.length > 0) {
 			selector.tags = {
-				$elemMatch: {
-					$eq: tags
-				}
-			};
-		} else if (tags !== null) {
-			selector.tags = {
-				$elemMatch: {
-					$in: tags
-				}
+				$in: filters
 			};
 		}
 
 		props.db
 			.find({
-				limit: 25,
+				limit: 50,
 				include_docs: true,
 				selector: selector
 			})
 			.then((results) => {
-				console.log(results.docs);
 				setItems(results.docs);
 			});
-	}, [props.db, tags]);
+	}, [props.db, filters]);
 
 	const editDoc = (id) => () => {
 		setRedirect(`/create?id=${id}`);
@@ -62,7 +63,6 @@ export default function List(props) {
 		props.db
 			.get(id)
 			.then((doc) => {
-				console.log(doc);
 				props.db.remove(doc);
 			})
 			.catch((err) => {
@@ -73,12 +73,56 @@ export default function List(props) {
 		setItems(newItems);
 	};
 
+	const addFilter = (e) => {
+		e.preventDefault();
+
+		if (!filters.includes(filterValue)) {
+			setFilters([...filters, filterValue]);
+		}
+
+		setFilterValue("");
+	};
+
+	const filterValueChange = (e) => {
+		setFilterValue(e.target.value);
+	};
+
+	const deleteFilter = (remove) => () => {
+		const newFilters = filters.filter((filter) => filter !== remove);
+
+		setFilters(newFilters);
+	};
+
 	return (
 		<Container>
+			{redirect !== null && <Navigate to={redirect} />}
+			<form onSubmit={addFilter}>
+				<input type="submit" value="+" />
+				<input
+					type="text"
+					value={filterValue}
+					onChange={filterValueChange}
+					placeholder="Filter"
+				/>
+			</form>
+			<ListGroup>
+				{filters.map((filter) => {
+					return (
+						<ListGroup.Item
+							className="w-25"
+							action
+							onClick={deleteFilter(filter)}
+							key={filter}
+						>
+							{filter}
+						</ListGroup.Item>
+					);
+				})}
+			</ListGroup>
+			<br />
 			{items.map((item, index) => {
 				return (
 					<div key={item._id}>
-						{redirect !== null && <Navigate to={redirect} />}
 						<Card>
 							<Card.Header>
 								<h1 className="float-start">{item.name}</h1>
@@ -91,16 +135,16 @@ export default function List(props) {
 							</Card.Header>
 							<Card.Body>
 								<h3>Content</h3>
-								<MDEditor.Markdown source={item.text} />
+								<MDEditor.Markdown source={Mustache.render(item.text, vars)} />
 								<hr />
 								{item.tags.length > 0 && (
 									<div id="tags">
 										<h3>Tags</h3>
-										<ul>
+										<ListGroup>
 											{item.tags.map((tag) => (
-												<li key={tag}>{tag}</li>
+												<ListGroup.Item key={tag}>{tag}</ListGroup.Item>
 											))}
-										</ul>
+										</ListGroup>
 									</div>
 								)}
 							</Card.Body>

@@ -13,11 +13,14 @@ export default function App() {
 					<Navbar.Toggle aria-controls="basic-navbar-nav" />
 					<Navbar.Collapse id="basic-navbar-nav">
 						<Nav className="me-auto">
-							<LinkContainer to="/list">
-								<button>List</button>
+							<LinkContainer to="/">
+								<button>Home</button>
 							</LinkContainer>
 							<LinkContainer to="/create">
 								<button>Create</button>
+							</LinkContainer>
+							<LinkContainer to="/vars">
+								<button>Variables</button>
 							</LinkContainer>
 						</Nav>
 					</Navbar.Collapse>

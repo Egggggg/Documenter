@@ -3,9 +3,11 @@ import ReactDOM from "react-dom";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import PouchDB from "pouchdb";
 import PouchDBFind from "pouchdb-find";
+
 import App from "./routes/app";
 import Creator from "./routes/creator";
 import List from "./routes/list";
+import Vars from "./routes/vars";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -15,17 +17,11 @@ const db = new PouchDB("documents");
 
 db.createIndex({
 	index: { fields: ["tags"] }
-})
-	.then(() => {
-		db.createIndex({
-			index: { fields: ["name"] }
-		});
-	})
-	.then(() => {
-		db.createIndex({
-			index: { fields: ["type"] }
-		});
+}).then(() => {
+	db.createIndex({
+		index: { fields: ["type"] }
 	});
+});
 
 ReactDOM.render(
 	<React.StrictMode>
@@ -34,7 +30,7 @@ ReactDOM.render(
 				<Route path="/" element={<App />}>
 					<Route path="/" element={<List db={db} />} />
 					<Route path="create" element={<Creator db={db} />} />
-					<Route path="list" element={<List db={db} />} />
+					<Route path="vars" element={<Vars db={db} />} />
 				</Route>
 			</Routes>
 		</BrowserRouter>
