@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Navigate } from "react-router-dom";
 import MDEditor from "@uiw/react-md-editor";
 
 import Button from "react-bootstrap/Button";
@@ -10,10 +10,10 @@ export default function List(props) {
 	const [items, setItems] = useState([]);
 	const [tags, setTags] = useState([]);
 	const [{ search }] = useState(useLocation());
+	const [redirect, setRedirect] = useState(null);
 
 	useEffect(() => {
 		const params = new URLSearchParams(search);
-
 		const tagsParam = params.get("tags");
 
 		try {
@@ -54,6 +54,10 @@ export default function List(props) {
 			});
 	}, [props.db, tags]);
 
+	const editDoc = (id) => () => {
+		setRedirect(`/create?id=${id}`);
+	};
+
 	const deleteDoc = (id) => () => {
 		props.db
 			.get(id)
@@ -74,11 +78,15 @@ export default function List(props) {
 			{items.map((item, index) => {
 				return (
 					<div key={item._id}>
+						{redirect !== null && <Navigate to={redirect} />}
 						<Card>
 							<Card.Header>
-								{item.name}
+								<h1 className="float-start">{item.name}</h1>
 								<Button className="float-end" onClick={deleteDoc(item._id)}>
 									Delete
+								</Button>
+								<Button className="float-end" onClick={editDoc(item._id)}>
+									Edit
 								</Button>
 							</Card.Header>
 							<Card.Body>

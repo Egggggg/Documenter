@@ -15,17 +15,24 @@ const db = new PouchDB("documents");
 
 db.createIndex({
 	index: { fields: ["tags"] }
-}).then(() => {
-	db.createIndex({
-		index: { fields: ["name"] }
+})
+	.then(() => {
+		db.createIndex({
+			index: { fields: ["name"] }
+		});
+	})
+	.then(() => {
+		db.createIndex({
+			index: { fields: ["type"] }
+		});
 	});
-});
 
 ReactDOM.render(
 	<React.StrictMode>
 		<BrowserRouter>
 			<Routes>
 				<Route path="/" element={<App />}>
+					<Route path="/" element={<List db={db} />} />
 					<Route path="create" element={<Creator db={db} />} />
 					<Route path="list" element={<List db={db} />} />
 				</Route>
