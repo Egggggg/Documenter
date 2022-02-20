@@ -22,9 +22,6 @@ function App() {
 							<LinkContainer to="/create">
 								<button>Create</button>
 							</LinkContainer>
-							<LinkContainer to="/collections">
-								<button>Collections</button>
-							</LinkContainer>
 						</Nav>
 					</Navbar.Collapse>
 				</Container>
