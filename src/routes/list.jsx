@@ -6,6 +6,8 @@ import Mustache from "mustache";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Container from "react-bootstrap/Container";
+import Dropdown from "react-bootstrap/Dropdown";
+import DropdownButton from "react-bootstrap/DropdownButton";
 import ListGroup from "react-bootstrap/ListGroup";
 
 export default function List(props) {
@@ -15,6 +17,9 @@ export default function List(props) {
 
 	const [filterValue, setFilterValue] = useState("");
 	const [filters, setFilters] = useState([]);
+	const [sortOrder, setSortOrder] = useState("Ascending");
+
+	// const sortOrderKeys = { Ascending: "asc", Descending: "desc" };
 
 	useEffect(() => {
 		props.db
@@ -35,25 +40,34 @@ export default function List(props) {
 
 	useEffect(() => {
 		const selector = {
-			type: "document"
+			type: "document",
+			sortKey: { $gt: true }
 		};
+
+		let index = "type";
 
 		if (filters.length > 0) {
 			selector.tags = {
 				$in: filters
 			};
+
+			index = "tags";
 		}
+
+		console.log(selector);
 
 		props.db
 			.find({
 				limit: 50,
 				include_docs: true,
-				selector: selector
+				selector: selector,
+				sort: ["sortKey"],
+				use_index: index
 			})
 			.then((results) => {
 				setItems(results.docs);
 			});
-	}, [props.db, filters]);
+	}, [props.db, filters, sortOrder]);
 
 	const editDoc = (id) => () => {
 		setRedirect(`/create?id=${id}`);
@@ -93,9 +107,17 @@ export default function List(props) {
 		setFilters(newFilters);
 	};
 
+	const selectSortOrder = (eventKey) => {
+		setSortOrder(eventKey);
+	};
+
 	return (
 		<Container>
 			{redirect !== null && <Navigate to={redirect} />}
+			<DropdownButton size="sm" onSelect={selectSortOrder} title={sortOrder}>
+				<Dropdown.Item eventKey="Ascending">Ascending</Dropdown.Item>
+				<Dropdown.Item eventKey="Descending">Descending</Dropdown.Item>
+			</DropdownButton>
 			<form onSubmit={addFilter}>
 				<input type="submit" value="+" />
 				<input
@@ -134,6 +156,7 @@ export default function List(props) {
 								</Button>
 							</Card.Header>
 							<Card.Body>
+								Sort Key: {item.sortKey}
 								<h3>Content</h3>
 								<MDEditor.Markdown source={Mustache.render(item.text, vars)} />
 								<hr />

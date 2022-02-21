@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { LinkContainer } from "react-router-bootstrap";
+import { NotificationContainer } from "react-notifications";
 
 import Container from "react-bootstrap/Container";
 import Nav from "react-bootstrap/Nav";
@@ -26,6 +27,7 @@ export default function App() {
 					</Navbar.Collapse>
 				</Container>
 			</Navbar>
+			<NotificationContainer />
 			<Outlet />
 		</div>
 	);

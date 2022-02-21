@@ -1,12 +1,14 @@
 import MDEditor from "@uiw/react-md-editor";
 import { useState, useEffect } from "react";
 import { useLocation, Navigate } from "react-router-dom";
+import { NotificationManager } from "react-notifications";
 
 import ListGroup from "react-bootstrap/ListGroup";
 
 export default function Creator(props) {
 	const [mdValue, setMdValue] = useState("# Boy howdy!");
 	const [nameValue, setNameValue] = useState("Default Name");
+	const [keyValue, setKeyValue] = useState("1");
 
 	const [tagValue, setTagValue] = useState("");
 	const [tags, setTags] = useState([]);
@@ -25,11 +27,14 @@ export default function Creator(props) {
 				setMdValue(doc.text);
 				setNameValue(doc.name);
 				setTags(doc.tags);
+				setKeyValue(doc.sortKey);
 			});
 		}
 	}, [id, props.db, search, setId]);
 
-	const save = () => {
+	const save = (leave) => () => {
+		console.log(id);
+
 		if (id !== null) {
 			props.db.get(id).then((doc) => {
 				props.db.put({
@@ -38,7 +43,8 @@ export default function Creator(props) {
 					name: nameValue,
 					tags: tags,
 					text: mdValue,
-					type: "document"
+					type: "document",
+					sortKey: keyValue
 				});
 			});
 		} else {
@@ -46,18 +52,18 @@ export default function Creator(props) {
 				name: nameValue,
 				tags: tags,
 				text: mdValue,
-				type: "document"
+				type: "document",
+				sortKey: keyValue
 			};
 
 			props.db.post(data);
 		}
 
-		setId(null);
-		setMdValue("# Boy howdy!");
-		setNameValue("Default Name");
-		setTags([]);
+		if (!leave) {
+			NotificationManager.success(null, "Saved", 750);
+		}
 
-		setRedirect(true);
+		setRedirect(leave);
 	};
 
 	const addTag = (e) => {
@@ -82,11 +88,28 @@ export default function Creator(props) {
 		setNameValue(e.target.value);
 	};
 
+	const mdEditorDown = (e) => {
+		if ((e.ctrlKey || e.metaKey) && e.code === "KeyS") {
+			e.preventDefault();
+			save(false)();
+		}
+	};
+
+	const keyValueChange = (e) => {
+		setKeyValue(e.target.value);
+	};
+
 	return (
 		<div className="creator">
 			{redirect && <Navigate to="/" />}
 			<input type="text" value={nameValue} onChange={nameValueChange} />
-			<MDEditor value={mdValue} onChange={setMdValue} />
+			<br />
+			<input type="text" value={keyValue} onChange={keyValueChange} />
+			<MDEditor
+				onKeyDown={mdEditorDown}
+				value={mdValue}
+				onChange={setMdValue}
+			/>
 			<form onSubmit={addTag}>
 				<input type="submit" value="+" />
 				<input type="text" value={tagValue} onChange={tagValueChange} />
@@ -100,7 +123,7 @@ export default function Creator(props) {
 					);
 				})}
 			</ListGroup>
-			<button onClick={save}>Create</button>
+			<button onClick={save(true)}>Create</button>
 		</div>
 	);
 }

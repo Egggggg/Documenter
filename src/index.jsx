@@ -10,17 +10,40 @@ import List from "./routes/list";
 import Vars from "./routes/vars";
 
 import "bootstrap/dist/css/bootstrap.min.css";
+import "react-notifications/lib/notifications.css";
 
 PouchDB.plugin(PouchDBFind);
 
 const db = new PouchDB("documents");
 
 db.createIndex({
-	index: { fields: ["tags"] }
+	index: { fields: ["type", "sortKey", "tags"] },
+	name: "tags"
 }).then(() => {
 	db.createIndex({
-		index: { fields: ["type"] }
+		index: { fields: ["type", "sortKey"] },
+		name: "type"
 	});
+});
+
+db.get("version").catch(() => {
+	db.find({ selector: { type: "document" } })
+		.then((results) => {
+			results.docs.forEach((doc, index) => {
+				db.put({
+					_id: doc._id,
+					_rev: doc._rev,
+					name: doc.name,
+					tags: doc.tags,
+					text: doc.text,
+					type: "document",
+					sortKey: index
+				});
+			});
+		})
+		.then(() => {
+			db.put({ _id: "version", version: 1, type: "meta" });
+		});
 });
 
 ReactDOM.render(
