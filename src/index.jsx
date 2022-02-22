@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { HashRouter, Route, Routes } from "react-router-dom";
 import PouchDB from "pouchdb";
 import PouchDBFind from "pouchdb-find";
 
@@ -26,7 +26,7 @@ db.createIndex({
 
 ReactDOM.render(
 	<React.StrictMode>
-		<BrowserRouter>
+		<HashRouter>
 			<Routes>
 				<Route path="/" element={<App />}>
 					<Route path="/" element={<List db={db} />} />
@@ -34,7 +34,7 @@ ReactDOM.render(
 					<Route path="vars" element={<Vars db={db} />} />
 				</Route>
 			</Routes>
-		</BrowserRouter>
+		</HashRouter>
 	</React.StrictMode>,
 	document.getElementById("root")
 );
