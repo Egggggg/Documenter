@@ -89,7 +89,7 @@ export default function Creator(props) {
 	};
 
 	const mdEditorDown = (e) => {
-		if ((e.ctrlKey || e.metaKey) && e.code === "KeyS") {
+		if ((e.ctrlKey || e.metaKey) && e.key === "s") {
 			e.preventDefault();
 			save(false)();
 		}
