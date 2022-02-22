@@ -17,34 +17,12 @@ PouchDB.plugin(PouchDBFind);
 const db = new PouchDB("documents");
 
 db.createIndex({
-	index: { fields: ["type", "sortKey", "tags"] },
-	name: "tags"
-}).then(() => {
+	index: { fields: ["sortKey", "tags", "type"], ddoc: "tags" }
+}).then(() =>
 	db.createIndex({
-		index: { fields: ["type", "sortKey"] },
-		name: "type"
-	});
-});
-
-db.get("version").catch(() => {
-	db.find({ selector: { type: "document" } })
-		.then((results) => {
-			results.docs.forEach((doc, index) => {
-				db.put({
-					_id: doc._id,
-					_rev: doc._rev,
-					name: doc.name,
-					tags: doc.tags,
-					text: doc.text,
-					type: "document",
-					sortKey: index
-				});
-			});
-		})
-		.then(() => {
-			db.put({ _id: "version", version: 1, type: "meta" });
-		});
-});
+		index: { fields: ["sortKey", "type"], ddoc: "type" }
+	})
+);
 
 ReactDOM.render(
 	<React.StrictMode>
