@@ -19,8 +19,6 @@ export default function List(props) {
 	const [filters, setFilters] = useState([]);
 	const [sortOrder, setSortOrder] = useState("Ascending");
 
-	// const sortOrderKeys = { Ascending: "asc", Descending: "desc" };
-
 	useEffect(() => {
 		props.db
 			.find({
@@ -39,30 +37,24 @@ export default function List(props) {
 	}, [props.db]);
 
 	useEffect(() => {
+		const sortOrderKeys = { Ascending: "asc", Descending: "desc" };
 		const selector = {
 			type: "document",
-			sortKey: { $gt: true }
+			sortKey: { $gte: null }
 		};
-
-		let index = "type";
 
 		if (filters.length > 0) {
 			selector.tags = {
 				$in: filters
 			};
-
-			index = "tags";
 		}
-
-		console.log(selector);
 
 		props.db
 			.find({
 				limit: 50,
 				include_docs: true,
 				selector: selector,
-				sort: ["sortKey"],
-				use_index: index
+				sort: [{ sortKey: sortOrderKeys[sortOrder] }]
 			})
 			.then((results) => {
 				setItems(results.docs);
