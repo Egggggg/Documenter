@@ -18,11 +18,17 @@ const db = new PouchDB("documents");
 
 db.createIndex({
 	index: { fields: ["sortKey", "tags", "type"], ddoc: "tags" }
-}).then(() =>
-	db.createIndex({
-		index: { fields: ["sortKey", "type"], ddoc: "type" }
-	})
-);
+})
+	.then(() =>
+		db.createIndex({
+			index: { fields: ["sortKey", "type"], ddoc: "type" }
+		})
+	)
+	.then(() => {
+		db.createIndex({
+			index: { fields: ["type", "name", "tag"], ddoc: "vars" }
+		});
+	});
 
 ReactDOM.render(
 	<React.StrictMode>

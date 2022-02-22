@@ -33,8 +33,6 @@ export default function Creator(props) {
 	}, [id, props.db, search, setId]);
 
 	const save = (leave) => () => {
-		console.log(id);
-
 		if (id !== null) {
 			props.db.get(id).then((doc) => {
 				props.db.put({
