@@ -224,6 +224,7 @@ export default function Vars(props) {
 						)
 					);
 				})}
+			<div style={{ height: "50px" }}></div>
 		</Container>
 	);
 }
