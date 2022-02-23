@@ -11,8 +11,8 @@ export default function Vars(props) {
 	const [vars, setVars] = useState({});
 	const [newName, setNewName] = useState("");
 	const [newValue, setNewValue] = useState("");
-	const [newTag, setNewTag] = useState("");
-	const [tags, setTags] = useState([]);
+	const [newScope, setNewScope] = useState("");
+	const [scopes, setScopes] = useState([]);
 
 	useEffect(() => {
 		props.db
@@ -27,56 +27,68 @@ export default function Vars(props) {
 							_rev: doc._rev,
 							name: doc._id,
 							value: doc.value,
-							tag: doc.tag
+							scope: doc.scope
 						});
 
 						doc.name = doc._id;
 					}
 
-					newVars[doc.tag] = {
-						...newVars[doc.tag],
+					if (!doc.scope) {
+						props.db.put({
+							_id: doc._id,
+							_rev: doc._rev,
+							name: doc.name,
+							value: doc.value,
+							scope: "global"
+						});
+
+						doc.scope = "global";
+					}
+
+					newVars[doc.scope] = {
+						...newVars[doc.scope],
 						[doc.name]: doc.value
 					};
 
-					if (!tags.includes(doc.tag)) {
-						setTags([...tags, doc.tag]);
+					if (!scopes.includes(doc.scope)) {
+						setScopes([...scopes, doc.scope]);
 					}
 				});
 
 				setVars(newVars);
 			});
-	}, [props.db, tags]);
+	}, [props.db, scopes]);
 
 	const addVar = (e) => {
 		e.preventDefault();
 
-		let tag = newTag;
+		let scope = newScope;
 		let exists = false;
 
-		if (!tag) {
-			tag = "global";
+		if (!scope) {
+			scope = "global";
 		}
 
-		if (vars[tag]) {
-			exists = Object.keys(vars[tag]).includes(newName);
+		if (vars[scope]) {
+			exists = Object.keys(vars[scope]).includes(newName);
 		}
 
-		if (tag === "global" && tags.includes(newName)) {
+		if (scope === "global" && scopes.includes(newName)) {
 			NotificationManager.error(
 				null,
-				"There is already a variable tag with this name"
+				"There is already a scope with this name"
 			);
 
 			return;
 		}
 
-		if (!["object", "undefined"].includes(typeof vars[tag])) {
-			console.log(typeof vars[tag]);
-			console.log(tag);
+		if (!["object", "undefined"].includes(typeof vars[scope])) {
+			console.log(typeof vars[scope]);
+			console.log(scope);
 
 			NotificationManager.error(
 				null,
-				"There is a variable in the global scope with this tag name"
+				"There is a variable in the global scope with this scope name"
 			);
 			return;
 		}
@@ -84,30 +96,30 @@ export default function Vars(props) {
 		if (exists) {
 			if (newValue === "") {
 				props.db
-					.find({ selector: { type: "var", tag: tag, name: newName } })
+					.find({ selector: { type: "var", scope: scope, name: newName } })
 					.then((results) => {
 						props.db.remove(results.docs[0]);
 					});
 			} else {
 				props.db
-					.find({ selector: { type: "var", tag: tag, name: newName } })
+					.find({ selector: { type: "var", scope: scope, name: newName } })
 					.then((results) => {
 						return props.db.put({
 							_id: new Date().toJSON(),
 							_rev: results.docs[0]._rev,
 							name: newName,
 							value: newValue,
-							tag: tag,
+							scope: scope,
 							type: "var"
 						});
 					});
 			}
-		} else {
+		} else if (newValue !== "") {
 			props.db.put({
 				_id: new Date().toJSON(),
 				name: newName,
 				value: newValue,
-				tag: tag,
+				scope: scope,
 				type: "var"
 			});
 		}
@@ -115,18 +127,22 @@ export default function Vars(props) {
 		if (newValue !== "") {
 			setVars({
 				...vars,
-				[tag]: { ...vars[tag], [newName]: newValue }
+				[scope]: { ...vars[scope], [newName]: newValue }
 			});
 		} else if (exists) {
 			const newVars = { ...vars };
-			delete newVars[tag][newName];
+			delete newVars[scope][newName];
+
+			if (Object.keys(newVars[scope]).length === 0) {
+				delete newVars[scope];
+			}
 
 			setVars(newVars);
 		}
 
 		setNewName("");
 		setNewValue("");
-		setNewTag("");
+		setNewScope("");
 	};
 
 	const newNameChange = (e) => {
@@ -137,14 +153,14 @@ export default function Vars(props) {
 		setNewValue(e.target.value);
 	};
 
-	const newTagChange = (e) => {
-		setNewTag(e.target.value);
+	const newScopeChange = (e) => {
+		setNewScope(e.target.value);
 	};
 
 	const selectVar = (key, name) => () => {
 		setNewName(name);
 		setNewValue(vars[key][name]);
-		setNewTag(key === "global" ? "" : key);
+		setNewScope(key === "global" ? "" : key);
 	};
 
 	return (
@@ -168,11 +184,11 @@ export default function Vars(props) {
 						placeholder="Value"
 					/>
 				</Form.Group>
-				<Form.Group className="mb3" controlId="formBasicVarTags">
+				<Form.Group className="mb3" controlId="formBasicVarScopes">
 					<Form.Label>Scope</Form.Label>
 					<Form.Control
-						value={newTag}
-						onChange={newTagChange}
+						value={newScope}
+						onChange={newScopeChange}
 						type="text"
 						placeholder="Scope"
 					/>
