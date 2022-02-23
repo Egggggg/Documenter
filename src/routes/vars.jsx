@@ -21,26 +21,14 @@ export default function Vars(props) {
 				const newVars = {};
 
 				results.docs.forEach((doc) => {
-					if (doc.name === undefined) {
-						props.db.put({
-							_id: doc._id,
-							_rev: doc._rev,
-							name: doc._id,
-							value: doc.value,
-							scope: doc.scope
-						});
+					if (!doc.name) {
+						props.db.put({ ...doc, name: doc._id });
 
 						doc.name = doc._id;
 					}
 
 					if (!doc.scope) {
-						props.db.put({
-							_id: doc._id,
-							_rev: doc._rev,
-							name: doc.name,
-							value: doc.value,
-							scope: "global"
-						});
+						props.db.put({ ...doc, scope: "global" });
 
 						doc.scope = "global";
 					}
