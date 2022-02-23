@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import MDEditor from "@uiw/react-md-editor";
-import Ejs from "ejs";
 
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
