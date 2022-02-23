@@ -42,10 +42,13 @@ export default function List(props) {
 				let newVars = {};
 
 				results.docs.forEach((doc) => {
-					if (doc.tag === "global") {
+					if (doc.scope === "global") {
 						newVars = { ...newVars, [doc.name]: doc.value };
 					} else {
-						newVars[doc.tag] = { ...newVars[doc.tag], [doc.name]: doc.value };
+						newVars[doc.scope] = {
+							...newVars[doc.scope],
+							[doc.name]: doc.value
+						};
 					}
 				});
 
