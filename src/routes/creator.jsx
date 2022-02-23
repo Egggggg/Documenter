@@ -38,7 +38,9 @@ export default function Creator(props) {
 	}, [id, props.db, search, setId]);
 
 	const save = (leave) => (e) => {
-		e.preventDefault();
+		if (e) {
+			e.preventDefault();
+		}
 
 		if (id !== null) {
 			props.db.get(id).then((doc) => {
