@@ -169,7 +169,7 @@ export default function List(props) {
 								<h3>Content</h3>
 								<MDEditor.Markdown
 									source={Handlebars.compile(
-										item.scope === ""
+										!item.scope
 											? item.text
 											: `{{#with ${item.scope}}}${item.text}{{/with}}`
 									)(vars)}
