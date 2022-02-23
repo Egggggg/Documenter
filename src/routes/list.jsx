@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import MDEditor from "@uiw/react-md-editor";
-import Mustache from "mustache";
+import Ejs from "ejs";
 
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -150,7 +150,7 @@ export default function List(props) {
 							<Card.Body>
 								Sort Key: {item.sortKey}
 								<h3>Content</h3>
-								<MDEditor.Markdown source={Mustache.render(item.text, vars)} />
+								<MDEditor.Markdown source={ejs.render(item.text, vars)} />
 								<hr />
 								{item.tags.length > 0 && (
 									<div id="tags">
