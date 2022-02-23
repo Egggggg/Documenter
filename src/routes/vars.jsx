@@ -8,7 +8,6 @@ import ListGroup from "react-bootstrap/ListGroup";
 
 export default function Vars(props) {
 	const [vars, setVars] = useState({});
-	const [taggedVars, setTaggedVars] = useState({});
 	const [newName, setNewName] = useState("");
 	const [newValue, setNewValue] = useState("");
 	const [newTag, setNewTag] = useState("");
@@ -21,6 +20,18 @@ export default function Vars(props) {
 
 				results.docs.forEach((doc) => {
 					console.log(doc);
+
+					if (doc.name === undefined) {
+						props.db.put({
+							_id: doc._id,
+							_rev: doc._rev,
+							name: doc._id,
+							value: doc.value,
+							tag: doc.tag
+						});
+
+						doc.name = doc._id;
+					}
 
 					newVars[doc.tag] = {
 						...newVars[doc.tag],
@@ -35,31 +46,35 @@ export default function Vars(props) {
 	const addVar = (e) => {
 		e.preventDefault();
 
+		let tag = newTag;
 		let exists = false;
 
-		if (vars[newTag] === undefined) {
-			exists = false;
-		} else {
-			exists = Object.keys(vars[newTag]).includes(newName);
+		if (!tag) {
+			tag = "global";
+		}
+
+		if (vars[tag]) {
+			exists = Object.keys(vars[tag]).includes(newName);
 		}
 
 		if (exists) {
 			if (newValue === "") {
 				props.db
-					.find({ selector: { type: "var", tag: newTag, name: newName } })
+					.find({ selector: { type: "var", tag: tag, name: newName } })
 					.then((results) => {
+						console.log(results);
 						props.db.remove(results.docs[0]);
 					});
 			} else {
 				props.db
-					.find({ selector: { type: "var", tag: newTag, name: newName } })
+					.find({ selector: { type: "var", tag: tag, name: newName } })
 					.then((results) => {
 						return props.db.put({
 							_id: new Date().toJSON(),
 							_rev: results.docs[0]._rev,
 							name: newName,
 							value: newValue,
-							tag: newTag,
+							tag: tag,
 							type: "var"
 						});
 					});
@@ -69,30 +84,24 @@ export default function Vars(props) {
 				_id: new Date().toJSON(),
 				name: newName,
 				value: newValue,
-				tag: newTag,
+				tag: tag,
 				type: "var"
 			});
 		}
 
-				const newTaggedVars = { ...taggedVars };
-				delete newTaggedVars[newTag][newName];
+		if (newValue !== "") {
+			setVars({
+				...vars,
+				[tag]: { ...vars[tag], [newName]: newValue }
+			});
+		} else if (exists) {
+			const newVars = { ...vars };
+			delete newVars[tag][newName];
 
-				setTaggedVars(newTaggedVars);
-				console.log(taggedVars);
-		
-			if (newValue !== "") {
-				setVars({
-					...vars,
-					[newTag]: { ...vars[newTag], [newName]: newValue }
-				});
-			} else if (exists) {
-				const newVars = { ...vars };
-				delete newVars[newName];
-
-				setVars(newVars);
-				console.log(vars);
-			}
+			setVars(newVars);
 		}
+
+		console.log(tag);
 
 		setNewName("");
 		setNewValue("");
@@ -114,7 +123,7 @@ export default function Vars(props) {
 	const selectVar = (key, name) => () => {
 		setNewName(name);
 		setNewValue(vars[key][name]);
-		setNewTag(key === "No Tag" ? "" : key);
+		setNewTag(key === "global" ? "" : key);
 	};
 
 	return (
@@ -153,26 +162,27 @@ export default function Vars(props) {
 			</Form>
 			<br />
 			<br />
-			{Object.keys(vars).length !== 0 && (
+			{vars["global"] && (
 				<Card>
-					<Card.Header>No Tags</Card.Header>
+					<Card.Header>global</Card.Header>
 					<ListGroup>
-						{Object.keys(vars["No Tags"]).map((key) => (
+						{Object.keys(vars["global"]).map((key) => (
 							<ListGroup.Item
 								key={key}
 								action
-								onClick={selectVar("No Tags", key)}
+								onClick={selectVar("global", key)}
 							>
-								{`${key}: ${vars[key]}`}
+								{`${key}: ${vars["global"][key]}`}
 							</ListGroup.Item>
 						))}
 					</ListGroup>
 				</Card>
 			)}
-			{Object.keys(vars).length !== 0 &&
-				Object.keys(vars).map(
-					(key) =>
-						key !== "No Tag" && (
+			{Object.keys(vars).length > 0 &&
+				Object.keys(vars).map((key) => {
+					console.log(key);
+					return (
+						key !== "global" && (
 							<Card key={key}>
 								<Card.Header>{key}</Card.Header>
 								<ListGroup>
@@ -188,7 +198,8 @@ export default function Vars(props) {
 								</ListGroup>
 							</Card>
 						)
-				)}
+					);
+				})}
 		</Container>
 	);
 }
