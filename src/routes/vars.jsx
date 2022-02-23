@@ -93,7 +93,7 @@ export default function Vars(props) {
 					.find({ selector: { type: "var", scope: scope, name: newName } })
 					.then((results) => {
 						return props.db.put({
-							_id: new Date().toJSON(),
+							_id: results.docs[0]._id,
 							_rev: results.docs[0]._rev,
 							name: newName,
 							value: newValue,
