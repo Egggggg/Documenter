@@ -29,6 +29,11 @@ db.createIndex({
 		db.createIndex({
 			index: { fields: ["type", "name", "tag"], ddoc: "vars" }
 		});
+	})
+	.then(() => {
+		db.createIndex({
+			index: { fields: ["scope", "name"], ddoc: "scopes" }
+		});
 	});
 
 ReactDOM.render(

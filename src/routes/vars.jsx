@@ -82,7 +82,7 @@ export default function Vars(props) {
 		}
 
 		if (exists) {
-			if (newValue === "") {
+			if (!newValue) {
 				props.db
 					.find({ selector: { type: "var", scope: scope, name: newName } })
 					.then((results) => {
@@ -112,7 +112,7 @@ export default function Vars(props) {
 			});
 		}
 
-		if (newValue !== "") {
+		if (newValue) {
 			setVars({
 				...vars,
 				[scope]: { ...vars[scope], [newName]: newValue }
@@ -130,7 +130,6 @@ export default function Vars(props) {
 
 		setNewName("");
 		setNewValue("");
-		setNewScope("");
 	};
 
 	const newNameChange = (e) => {
@@ -224,7 +223,6 @@ export default function Vars(props) {
 						)
 					);
 				})}
-			<div style={{ height: "50px" }}></div>
 		</Container>
 	);
 }

@@ -33,6 +33,7 @@ export default function App() {
 			</Navbar>
 			<NotificationContainer />
 			<Outlet />
+			<div style={{ height: "50px" }}></div>
 		</div>
 	);
 }

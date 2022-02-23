@@ -139,14 +139,71 @@ export default function SaveLoad(props) {
 	const load = async (e) => {
 		e.preventDefault();
 
-		const text = e.target.elements.formBasicLoadFile.files[0].text();
+		const varString = [0, 1, 2, 3, 4]
+			.map(() => {
+				return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 25)];
+			})
+			.join("");
+
+		const text = await e.target.elements.formBasicLoadFile.files[0].text();
+
 		const data = JSON.parse(text);
 
-		if (loadOptions.addType === "append") {
-			if (loadOptions.type === "all") {
-				Object.keys(data).forEach((key) => {});
+		Object.keys(data).forEach(async (key) => {
+			const doc = data[key];
+
+			if (loadOptions.addType === "append") {
+				if (doc.type === "document" && loadOptions.type !== "vars") {
+					props.db.put({
+						_id: new Date().toJSON(),
+						name: doc.name,
+						tags: doc.tags,
+						text: doc.text,
+						type: "document",
+						sortKey: doc.sortKey,
+						scope: doc.scope
+					});
+				}
+				if (doc.type === "var" && loadOptions.type !== "docs") {
+					let name = doc.name;
+					let scope = doc.scope;
+
+					if (doc.scope === "global") {
+						const results = await props.db.find({
+							selector: { scope: doc.name }
+						});
+
+						if (results.length > 0) {
+							name = `${name}-${varString}`;
+						}
+					}
+
+					let results = await props.db.find({
+						selector: { scope: scope, name: name }
+					});
+
+					if (results.docs.length > 0) {
+						name = `${name}-${varString}`;
+					}
+
+					results = await props.db.find({
+						selector: { scope: "global", name: scope }
+					});
+
+					if (results.docs.length > 0) {
+						scope = `${scope}-${varString}`;
+					}
+
+					props.db.put({
+						_id: new Date().toJSON(),
+						name: name,
+						value: doc.value,
+						scope: scope,
+						type: "var"
+					});
+				}
 			}
-		}
+		});
 	};
 
 	const checkboxChange = (e) => {
@@ -251,8 +308,9 @@ export default function SaveLoad(props) {
 				</ToggleButtonGroup>
 				{loadOptions.addType === "append" && loadOptions.type !== "docs" && (
 					<Alert variant="secondary">
-						Any variables from the loaded file with names that conflict with
-						existing variables will have a random string appended to the end.
+						Any variables or scopes from the loaded file with names that
+						conflict with existing variables or scopes will have a random string
+						appended to the end.
 					</Alert>
 				)}
 				{loadOptions.addType === "overwrite" && (

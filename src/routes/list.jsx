@@ -31,6 +31,7 @@ export default function List(props) {
 	const [filterValue, setFilterValue] = useState("");
 	const [filters, setFilters] = useState([]);
 	const [sortOrder, setSortOrder] = useState("Ascending");
+	const [page, setPage] = useState(0);
 
 	useEffect(() => {
 		props.db
@@ -71,7 +72,8 @@ export default function List(props) {
 
 		props.db
 			.find({
-				limit: 50,
+				limit: 5,
+				skip: 5 * page,
 				include_docs: true,
 				selector: selector,
 				sort: [{ sortKey: sortOrderKeys[sortOrder] }]
@@ -79,7 +81,7 @@ export default function List(props) {
 			.then((results) => {
 				setItems(results.docs);
 			});
-	}, [props.db, filters, sortOrder]);
+	}, [props.db, filters, sortOrder, page]);
 
 	const editDoc = (id) => () => {
 		setRedirect(`/create?id=${id}`);
@@ -123,6 +125,14 @@ export default function List(props) {
 		setSortOrder(eventKey);
 	};
 
+	const nextPage = () => {
+		setPage(page + 1);
+	};
+
+	const prevPage = () => {
+		setPage(page > 0 ? page - 1 : page);
+	};
+
 	return (
 		<Container>
 			{redirect !== null && <Navigate to={redirect} />}
@@ -130,6 +140,8 @@ export default function List(props) {
 				<Dropdown.Item eventKey="Ascending">Ascending</Dropdown.Item>
 				<Dropdown.Item eventKey="Descending">Descending</Dropdown.Item>
 			</DropdownButton>
+			<Button onClick={prevPage}>Previous Page</Button>
+			<Button onClick={nextPage}>Next Page</Button>
 			<form onSubmit={addFilter}>
 				<input type="submit" value="+" />
 				<input
@@ -194,6 +206,8 @@ export default function List(props) {
 					</div>
 				);
 			})}
+			<Button onClick={prevPage}>Previous Page</Button>
+			<Button onClick={nextPage}>Next Page</Button>
 		</Container>
 	);
 }
