@@ -8,6 +8,7 @@ import App from "./routes/app";
 import Creator from "./routes/creator";
 import List from "./routes/list";
 import Vars from "./routes/vars";
+import SaveLoad from "./routes/saveLoad";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "react-notifications/lib/notifications.css";
@@ -38,6 +39,7 @@ ReactDOM.render(
 					<Route path="/" element={<List db={db} />} />
 					<Route path="create" element={<Creator db={db} />} />
 					<Route path="vars" element={<Vars db={db} />} />
+					<Route path="save-load" element={<SaveLoad db={db} />} />
 				</Route>
 			</Routes>
 		</HashRouter>

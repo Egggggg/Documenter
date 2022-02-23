@@ -169,12 +169,12 @@ export default function Vars(props) {
 					/>
 				</Form.Group>
 				<Form.Group className="mb3" controlId="formBasicVarTags">
-					<Form.Label>Tags</Form.Label>
+					<Form.Label>Scope</Form.Label>
 					<Form.Control
 						value={newTag}
 						onChange={newTagChange}
 						type="text"
-						placeholder="Tag"
+						placeholder="Scope"
 					/>
 				</Form.Group>
 				<br />

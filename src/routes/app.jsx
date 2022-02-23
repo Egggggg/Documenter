@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import { LinkContainer } from "react-router-bootstrap";
 import { NotificationContainer } from "react-notifications";
 
+import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import Nav from "react-bootstrap/Nav";
 import Navbar from "react-bootstrap/Navbar";
@@ -15,13 +16,16 @@ export default function App() {
 					<Navbar.Collapse id="basic-navbar-nav">
 						<Nav className="me-auto">
 							<LinkContainer to="/">
-								<button>Home</button>
+								<Button>Home</Button>
 							</LinkContainer>
 							<LinkContainer to="/create">
-								<button>Create</button>
+								<Button>Create</Button>
 							</LinkContainer>
 							<LinkContainer to="/vars">
-								<button>Variables</button>
+								<Button>Variables</Button>
+							</LinkContainer>
+							<LinkContainer to="/save-load">
+								<Button>Save/Load</Button>
 							</LinkContainer>
 						</Nav>
 					</Navbar.Collapse>
