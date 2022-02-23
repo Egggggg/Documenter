@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { NotificationManager } from "react-notifications";
 
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -11,6 +12,7 @@ export default function Vars(props) {
 	const [newName, setNewName] = useState("");
 	const [newValue, setNewValue] = useState("");
 	const [newTag, setNewTag] = useState("");
+	const [tags, setTags] = useState([]);
 
 	useEffect(() => {
 		props.db
@@ -19,8 +21,6 @@ export default function Vars(props) {
 				const newVars = {};
 
 				results.docs.forEach((doc) => {
-					console.log(doc);
-
 					if (doc.name === undefined) {
 						props.db.put({
 							_id: doc._id,
@@ -37,11 +37,15 @@ export default function Vars(props) {
 						...newVars[doc.tag],
 						[doc.name]: doc.value
 					};
+
+					if (!tags.includes(doc.tag)) {
+						setTags([...tags, doc.tag]);
+					}
 				});
 
 				setVars(newVars);
 			});
-	}, [props.db]);
+	}, [props.db, tags]);
 
 	const addVar = (e) => {
 		e.preventDefault();
@@ -57,12 +61,31 @@ export default function Vars(props) {
 			exists = Object.keys(vars[tag]).includes(newName);
 		}
 
+		if (tag === "global" && tags.includes(newName)) {
+			NotificationManager.error(
+				null,
+				"There is already a variable tag with this name"
+			);
+
+			return;
+		}
+
+		if (!["object", "undefined"].includes(typeof vars[tag])) {
+			console.log(typeof vars[tag]);
+			console.log(tag);
+
+			NotificationManager.error(
+				null,
+				"There is a variable in the global scope with this tag name"
+			);
+			return;
+		}
+
 		if (exists) {
 			if (newValue === "") {
 				props.db
 					.find({ selector: { type: "var", tag: tag, name: newName } })
 					.then((results) => {
-						console.log(results);
 						props.db.remove(results.docs[0]);
 					});
 			} else {
@@ -100,8 +123,6 @@ export default function Vars(props) {
 
 			setVars(newVars);
 		}
-
-		console.log(tag);
 
 		setNewName("");
 		setNewValue("");
@@ -180,7 +201,6 @@ export default function Vars(props) {
 			)}
 			{Object.keys(vars).length > 0 &&
 				Object.keys(vars).map((key) => {
-					console.log(key);
 					return (
 						key !== "global" && (
 							<Card key={key}>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import MDEditor from "@uiw/react-md-editor";
+import Handlebars from "handlebars/dist/handlebars.min.js";
 
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -8,6 +9,19 @@ import Container from "react-bootstrap/Container";
 import Dropdown from "react-bootstrap/Dropdown";
 import DropdownButton from "react-bootstrap/DropdownButton";
 import ListGroup from "react-bootstrap/ListGroup";
+
+Handlebars.registerHelper("gt", (arg1, arg2) => {
+	return parseFloat(arg1) > parseFloat(arg2);
+});
+
+Handlebars.registerHelper("lt", (arg1, arg2) => {
+	return parseFloat(arg1) < parseFloat(arg2);
+});
+
+Handlebars.registerHelper("eq", (arg1, arg2) => {
+	// eslint-disable-next-line eqeqeq
+	return arg1 == arg2;
+});
 
 export default function List(props) {
 	const [items, setItems] = useState([]);
@@ -25,13 +39,17 @@ export default function List(props) {
 				selector: { type: "var" }
 			})
 			.then((results) => {
-				setVars(
-					Object.fromEntries(
-						results.docs.map((doc) => {
-							return [doc._id, doc.value];
-						})
-					)
-				);
+				let newVars = {};
+
+				results.docs.forEach((doc) => {
+					if (doc.tag === "global") {
+						newVars = { ...newVars, [doc.name]: doc.value };
+					} else {
+						newVars[doc.tag] = { ...newVars[doc.tag], [doc.name]: doc.value };
+					}
+				});
+
+				setVars(newVars);
 			});
 	}, [props.db]);
 
@@ -149,7 +167,13 @@ export default function List(props) {
 							<Card.Body>
 								Sort Key: {item.sortKey}
 								<h3>Content</h3>
-								<MDEditor.Markdown source={ejs.render(item.text, vars)} />
+								<MDEditor.Markdown
+									source={Handlebars.compile(
+										item.scope === ""
+											? item.text
+											: `{{#with ${item.scope}}}${item.text}{{/with}}`
+									)(vars)}
+								/>
 								<hr />
 								{item.tags.length > 0 && (
 									<div id="tags">

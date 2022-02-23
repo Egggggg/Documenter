@@ -3,12 +3,16 @@ import { useState, useEffect } from "react";
 import { useLocation, Navigate } from "react-router-dom";
 import { NotificationManager } from "react-notifications";
 
+import Button from "react-bootstrap/Button";
+import Card from "react-bootstrap/Card";
+import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 
 export default function Creator(props) {
 	const [mdValue, setMdValue] = useState("# Boy howdy!");
 	const [nameValue, setNameValue] = useState("Default Name");
 	const [keyValue, setKeyValue] = useState("1");
+	const [scope, setScope] = useState("");
 
 	const [tagValue, setTagValue] = useState("");
 	const [tags, setTags] = useState([]);
@@ -28,6 +32,7 @@ export default function Creator(props) {
 				setNameValue(doc.name);
 				setTags(doc.tags);
 				setKeyValue(doc.sortKey);
+				setScope(doc.scope || "");
 			});
 		}
 	}, [id, props.db, search, setId]);
@@ -42,7 +47,8 @@ export default function Creator(props) {
 					tags: tags,
 					text: mdValue,
 					type: "document",
-					sortKey: keyValue
+					sortKey: keyValue,
+					scope: scope
 				});
 			});
 		} else {
@@ -51,7 +57,8 @@ export default function Creator(props) {
 				tags: tags,
 				text: mdValue,
 				type: "document",
-				sortKey: keyValue
+				sortKey: keyValue,
+				scope: scope
 			};
 
 			props.db.post(data);
@@ -66,6 +73,7 @@ export default function Creator(props) {
 
 	const addTag = (e) => {
 		e.preventDefault();
+
 		if (!tags.includes(tagValue)) {
 			setTags([...tags, tagValue]);
 		}
@@ -97,31 +105,70 @@ export default function Creator(props) {
 		setKeyValue(e.target.value);
 	};
 
+	const scopeChange = (e) => {
+		setScope(e.target.value);
+	};
+
 	return (
-		<div className="creator">
+		<Form onSubmit={save(true)}>
 			{redirect && <Navigate to="/" />}
-			<input type="text" value={nameValue} onChange={nameValueChange} />
-			<br />
-			<input type="text" value={keyValue} onChange={keyValueChange} />
+			<Form.Group className="mb-3" controlId="formBasicItemName">
+				<Form.Label>Item Name</Form.Label>
+				<Form.Control
+					type="text"
+					value={nameValue}
+					onChange={nameValueChange}
+					placeholder="Name"
+				/>
+			</Form.Group>
+			<Form.Group className="mb-3" controlId="formBasicSortKey">
+				<Form.Label>Sort Key</Form.Label>
+				<Form.Control
+					type="text"
+					value={keyValue}
+					onChange={keyValueChange}
+					placeholder="Sort key"
+				/>
+			</Form.Group>
+			<Form.Group className="mb-3" controlId="formBasicScope">
+				<Form.Label>Scope</Form.Label>
+				<Form.Control
+					type="text"
+					value={scope}
+					onChange={scopeChange}
+					placeholder="Scope"
+				/>
+			</Form.Group>
 			<MDEditor
 				onKeyDown={mdEditorDown}
 				value={mdValue}
 				onChange={setMdValue}
 			/>
-			<form onSubmit={addTag}>
-				<input type="submit" value="+" />
-				<input type="text" value={tagValue} onChange={tagValueChange} />
-			</form>
-			<ListGroup>
-				{tags.map((tag) => {
-					return (
-						<ListGroup.Item action key={tag} onClick={deleteTag(tag)}>
-							{tag}
-						</ListGroup.Item>
-					);
-				})}
-			</ListGroup>
-			<button onClick={save(true)}>Create</button>
-		</div>
+			<Card>
+				<Card.Header>Tags</Card.Header>
+				<Form.Group className="mb-3" controlId="formBasicTag">
+					<Form.Label>Add Tag</Form.Label>
+					<Form.Control
+						type="text"
+						value={tagValue}
+						onChange={tagValueChange}
+						placeholder="New tag"
+					/>
+					<Button onClick={addTag} type="submit">
+						Add
+					</Button>
+				</Form.Group>
+				<ListGroup>
+					{tags.map((tag) => {
+						return (
+							<ListGroup.Item action key={tag} onClick={deleteTag(tag)}>
+								{tag}
+							</ListGroup.Item>
+						);
+					})}
+				</ListGroup>
+			</Card>
+			<Button type="submit">Create</Button>
+		</Form>
 	);
 }
