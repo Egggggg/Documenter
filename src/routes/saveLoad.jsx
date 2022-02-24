@@ -166,20 +166,28 @@ export default function SaveLoad(props) {
 		}
 
 		if (loadOptions.addType === "replaceAll") {
-			let results;
+			let results = [];
 
 			if (loadOptions.type !== "vars") {
-				results = await props.db.find({
-					selector: { type: "document" }
-				});
-			} else if (loadOptions.type !== "docs") {
-				results = await props.db.find({
-					selector: { type: "var" }
-				});
+				results.push(
+					await props.db.find({
+						selector: { type: "document" }
+					})
+				);
 			}
 
-			for (const doc of results.docs) {
-				props.db.remove(doc);
+			if (loadOptions.type !== "docs") {
+				results.push(
+					await props.db.find({
+						selector: { type: "var" }
+					})
+				);
+			}
+
+			for (let i in results) {
+				for (const doc of results[i].docs) {
+					props.db.remove(doc);
+				}
 			}
 
 			if (!text) {
