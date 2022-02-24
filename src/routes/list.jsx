@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, NavLink } from "react-router-dom";
 import MDEditor from "@uiw/react-md-editor";
 import Handlebars from "handlebars/dist/handlebars.min.js";
 
@@ -23,6 +23,8 @@ Handlebars.registerHelper("eq", (arg1, arg2) => {
 	return arg1 == arg2;
 });
 
+const perPage = 5;
+
 export default function List(props) {
 	const [items, setItems] = useState([]);
 	const [redirect, setRedirect] = useState(null);
@@ -32,6 +34,7 @@ export default function List(props) {
 	const [filters, setFilters] = useState([]);
 	const [sortOrder, setSortOrder] = useState("Ascending");
 	const [page, setPage] = useState(0);
+	const [pages, setPages] = useState(1);
 
 	useEffect(() => {
 		props.db
@@ -72,7 +75,30 @@ export default function List(props) {
 
 		props.db
 			.find({
-				limit: 15,
+				selector: selector,
+				sort: [{ sortKey: sortOrderKeys[sortOrder] }]
+			})
+			.then((results) => {
+				setPages(Math.ceil(results.docs.length / perPage));
+			});
+	});
+
+	useEffect(() => {
+		const sortOrderKeys = { Ascending: "asc", Descending: "desc" };
+		const selector = {
+			type: "document",
+			sortKey: { $gte: null }
+		};
+
+		if (filters.length > 0) {
+			selector.tags = {
+				$in: filters
+			};
+		}
+
+		props.db
+			.find({
+				limit: perPage,
 				skip: 5 * page,
 				include_docs: true,
 				selector: selector,
@@ -126,7 +152,7 @@ export default function List(props) {
 	};
 
 	const nextPage = () => {
-		setPage(page + 1);
+		setPage(page < pages - 1 ? page + 1 : page);
 	};
 
 	const prevPage = () => {
@@ -147,39 +173,68 @@ export default function List(props) {
 		}
 	};
 
+	const pageList = () => {
+		return (
+			<>
+				<Button
+					variant="link"
+					style={{ visibility: page > 0 ? "visible" : "hidden" }}
+					onClick={prevPage}
+				>
+					Prev
+				</Button>
+				Page {page + 1}/{pages > 0 ? pages : 1}
+				<Button
+					variant="link"
+					style={{ visibility: page < pages - 1 ? "visible" : "hidden" }}
+					onClick={nextPage}
+				>
+					Next
+				</Button>
+			</>
+		);
+	};
+
 	return (
 		<Container>
 			{redirect !== null && <Navigate to={redirect} />}
-			<DropdownButton size="sm" onSelect={selectSortOrder} title={sortOrder}>
-				<Dropdown.Item eventKey="Ascending">Ascending</Dropdown.Item>
-				<Dropdown.Item eventKey="Descending">Descending</Dropdown.Item>
-			</DropdownButton>
-			<Button onClick={prevPage}>Previous Page</Button>
-			<Button onClick={nextPage}>Next Page</Button>
-			<form onSubmit={addFilter}>
-				<input type="submit" value="+" />
-				<input
-					type="text"
-					value={filterValue}
-					onChange={filterValueChange}
-					placeholder="Filter"
-				/>
-			</form>
-			<ListGroup>
-				{filters.map((filter) => {
-					return (
-						<ListGroup.Item
-							className="w-25"
-							action
-							onClick={deleteFilter(filter)}
-							key={filter}
-						>
-							{filter}
-						</ListGroup.Item>
-					);
-				})}
-			</ListGroup>
+			<div className="w-25 text-center">
+				<DropdownButton size="sm" onSelect={selectSortOrder} title={sortOrder}>
+					<Dropdown.Item eventKey="Ascending">Ascending</Dropdown.Item>
+					<Dropdown.Item eventKey="Descending">Descending</Dropdown.Item>
+				</DropdownButton>
+				{pageList()}
+				<form onSubmit={addFilter}>
+					<input type="submit" value="+" />
+					<input
+						type="text"
+						value={filterValue}
+						onChange={filterValueChange}
+						placeholder="Filter"
+					/>
+				</form>
+				<ListGroup>
+					{filters.map((filter) => {
+						return (
+							<ListGroup.Item
+								className="w-25"
+								action
+								onClick={deleteFilter(filter)}
+								key={filter}
+							>
+								{filter}
+							</ListGroup.Item>
+						);
+					})}
+				</ListGroup>
+			</div>
 			<br />
+			{items.length === 0 && (
+				<h3>
+					There's nothing here yet! To add a document, go to the{" "}
+					<NavLink to="/create">create</NavLink> page
+				</h3>
+			)}
 			{items.map((item, index) => {
 				return (
 					<div key={item._id}>
@@ -214,8 +269,7 @@ export default function List(props) {
 					</div>
 				);
 			})}
-			<Button onClick={prevPage}>Previous Page</Button>
-			<Button onClick={nextPage}>Next Page</Button>
+			{items.length > 0 && pageList()}
 		</Container>
 	);
 }

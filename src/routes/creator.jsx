@@ -24,10 +24,12 @@ export default function Creator(props) {
 
 	useEffect(() => {
 		const params = new URLSearchParams(search);
-		setId(params.get("id"));
+		const idParam = params.get("id");
 
-		if (id != null) {
-			props.db.get(id, { include_docs: true }).then((doc) => {
+		setId(idParam);
+
+		if (idParam) {
+			props.db.get(idParam, { include_docs: true }).then((doc) => {
 				setMdValue(doc.text);
 				setNameValue(doc.name);
 				setTags(doc.tags);
@@ -35,14 +37,16 @@ export default function Creator(props) {
 				setScope(doc.scope || "");
 			});
 		}
-	}, [id, props.db, search, setId]);
+	}, [props.db, search, setId]);
 
 	const save = (leave) => (e) => {
 		if (e) {
 			e.preventDefault();
 		}
 
-		if (id !== null) {
+		console.log(id);
+
+		if (id) {
 			props.db.get(id).then((doc) => {
 				props.db.put({
 					_id: id,
@@ -56,7 +60,9 @@ export default function Creator(props) {
 				});
 			});
 		} else {
+			const newId = new Date().toJSON();
 			props.db.post({
+				_id: newId,
 				name: nameValue,
 				tags: tags,
 				text: mdValue,
@@ -64,6 +70,10 @@ export default function Creator(props) {
 				sortKey: keyValue,
 				scope: scope
 			});
+
+			if (!leave) {
+				setId(newId);
+			}
 		}
 
 		if (!leave) {
@@ -171,6 +181,7 @@ export default function Creator(props) {
 				</ListGroup>
 			</Card>
 			<Button type="submit">Create</Button>
+			<span>(or Ctrl+S in the text editor)</span>
 		</Form>
 	);
 }

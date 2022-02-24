@@ -144,14 +144,6 @@ export default function SaveLoad(props) {
 	const load = async (e) => {
 		e.preventDefault();
 
-		setShowModal(true);
-
-		const varString = [0, 1, 2, 3, 4]
-			.map(() => {
-				return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 25)];
-			})
-			.join("");
-
 		let text;
 
 		if (
@@ -159,11 +151,18 @@ export default function SaveLoad(props) {
 			loadOptions.addType !== "replaceAll"
 		) {
 			NotificationManager.warning(null, "No file chosen");
-			setShowModal(false);
 			return;
 		} else if (e.target.elements.formBasicLoadFile.files[0]) {
 			text = await e.target.elements.formBasicLoadFile.files[0].text();
 		}
+
+		setShowModal(true);
+
+		const varString = [0, 1, 2, 3, 4]
+			.map(() => {
+				return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 25)];
+			})
+			.join("");
 
 		if (loadOptions.addType === "replaceAll") {
 			let results = [];
@@ -205,12 +204,12 @@ export default function SaveLoad(props) {
 			if (loadOptions.addType === "append") {
 				if (doc.type === "document" && loadOptions.type !== "vars") {
 					props.db.post({
-						name: doc.name,
-						tags: doc.tags,
-						text: doc.text,
+						name: doc.name || "",
+						tags: doc.tags || [],
+						text: doc.text || "",
 						type: "document",
-						sortKey: doc.sortKey,
-						scope: doc.scope
+						sortKey: doc.sortKey || "1",
+						scope: doc.scope || "global"
 					});
 				} else if (doc.type === "var" && loadOptions.type !== "docs") {
 					let name = doc.name;
@@ -242,8 +241,7 @@ export default function SaveLoad(props) {
 						scope = `${scope}-${varString}`;
 					}
 
-					props.db.put({
-						_id: new Date().toJSON(),
+					props.db.post({
 						name: name,
 						value: doc.value,
 						scope: scope,
@@ -259,21 +257,21 @@ export default function SaveLoad(props) {
 						props.db.put({
 							_id: doc._id,
 							_rev: result._rev,
-							name: doc.name,
-							tags: doc.tags,
-							text: doc.text,
+							name: doc.name || "",
+							tags: doc.tags || [],
+							text: doc.text || "",
 							type: "document",
-							sortKey: doc.sortKey,
-							scope: doc.scope
+							sortKey: doc.sortKey || "1",
+							scope: doc.scope || "global"
 						});
 					} catch {
 						props.db.post({
-							name: doc.name,
-							tags: doc.tags,
-							text: doc.text,
+							name: doc.name || "",
+							tags: doc.tags || [],
+							text: doc.text || "",
 							type: "document",
-							sortKey: doc.sortKey,
-							scope: doc.scope
+							sortKey: doc.sortKey || "1",
+							scope: doc.scope || "global"
 						});
 					}
 				} else if (doc.type === "var" && loadOptions.type !== "docs") {
@@ -319,12 +317,12 @@ export default function SaveLoad(props) {
 			} else if (loadOptions.addType === "replaceAll") {
 				if (doc.type === "document" && loadOptions.type !== "vars") {
 					props.db.post({
-						name: doc.name,
-						tags: doc.tags,
-						text: doc.text,
+						name: doc.name || "",
+						tags: doc.tags || [],
+						text: doc.text || "",
 						type: "document",
-						sortKey: doc.sortKey,
-						scope: doc.scope
+						sortKey: doc.sortKey || "1",
+						scope: doc.scope || "global"
 					});
 				} else if (doc.type === "var" && loadOptions.type !== "docs") {
 					props.db.post({
