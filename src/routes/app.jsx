@@ -12,21 +12,30 @@ export default function App() {
 		<div className="app">
 			<Navbar expand="md">
 				<Container>
+					<Navbar.Brand href="/#/">Documenter</Navbar.Brand>
 					<Navbar.Toggle aria-controls="basic-navbar-nav" />
 					<Navbar.Collapse id="basic-navbar-nav">
 						<Nav className="me-auto">
-							<LinkContainer to="/">
-								<Button>Home</Button>
-							</LinkContainer>
-							<LinkContainer to="/create">
-								<Button>Create</Button>
-							</LinkContainer>
-							<LinkContainer to="/vars">
-								<Button>Variables</Button>
-							</LinkContainer>
-							<LinkContainer to="/save-load">
-								<Button>Save/Load</Button>
-							</LinkContainer>
+							<Nav.Link>
+								<LinkContainer to="/">
+									<Button>Home</Button>
+								</LinkContainer>
+							</Nav.Link>
+							<Nav.Link>
+								<LinkContainer to="/create">
+									<Button>Create</Button>
+								</LinkContainer>
+							</Nav.Link>
+							<Nav.Link>
+								<LinkContainer to="/vars">
+									<Button>Variables</Button>
+								</LinkContainer>
+							</Nav.Link>
+							<Nav.Link>
+								<LinkContainer to="/save-load">
+									<Button>Save/Load</Button>
+								</LinkContainer>
+							</Nav.Link>
 						</Nav>
 					</Navbar.Collapse>
 				</Container>

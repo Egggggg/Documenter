@@ -70,7 +70,11 @@ export default function Vars(props) {
 			return;
 		}
 
-		if (!["object", "undefined"].includes(typeof vars[scope])) {
+		// if vars[scope] isn't an object or undefined, it is a variable
+		if (
+			vars.global &&
+			!["object", "undefined"].includes(typeof vars.global[scope])
+		) {
 			console.log(typeof vars[scope]);
 			console.log(scope);
 

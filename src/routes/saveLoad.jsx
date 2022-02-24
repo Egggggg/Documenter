@@ -2,11 +2,14 @@ import JSZip from "jszip";
 import FileSaver from "file-saver";
 import { useState } from "react";
 import Handlebars from "handlebars/dist/handlebars.min.js";
+import { NotificationManager } from "react-notifications";
 
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import Form from "react-bootstrap/Form";
+import ListGroup from "react-bootstrap/ListGroup";
+import Modal from "react-bootstrap/Modal";
 import ToggleButton from "react-bootstrap/ToggleButton";
 import ToggleButtonGroup from "react-bootstrap/ToggleButtonGroup";
 
@@ -21,6 +24,8 @@ export default function SaveLoad(props) {
 		addType: "append",
 		type: "all"
 	});
+
+	const [showModal, setShowModal] = useState(false);
 
 	const save = () => {
 		const manifest = {};
@@ -139,17 +144,54 @@ export default function SaveLoad(props) {
 	const load = async (e) => {
 		e.preventDefault();
 
+		setShowModal(true);
+
 		const varString = [0, 1, 2, 3, 4]
 			.map(() => {
 				return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 25)];
 			})
 			.join("");
 
-		const text = await e.target.elements.formBasicLoadFile.files[0].text();
+		let text;
+
+		if (
+			!e.target.elements.formBasicLoadFile.files[0] &&
+			loadOptions.addType !== "replaceAll"
+		) {
+			NotificationManager.warning(null, "No file chosen");
+			setShowModal(false);
+			return;
+		} else if (e.target.elements.formBasicLoadFile.files[0]) {
+			text = await e.target.elements.formBasicLoadFile.files[0].text();
+		}
+
+		if (loadOptions.addType === "replaceAll") {
+			let results;
+
+			if (loadOptions.type !== "vars") {
+				results = await props.db.find({
+					selector: { type: "document" }
+				});
+			} else if (loadOptions.type !== "docs") {
+				results = await props.db.find({
+					selector: { type: "var" }
+				});
+			}
+
+			for (const doc of results.docs) {
+				props.db.remove(doc);
+			}
+
+			if (!text) {
+				setShowModal(false);
+				return;
+			}
+		}
 
 		const data = JSON.parse(text);
 
-		Object.keys(data).forEach(async (key) => {
+		for (const key of Object.keys(data)) {
+			await new Promise((r) => setTimeout(r, 1));
 			const doc = data[key];
 
 			if (loadOptions.addType === "append") {
@@ -164,16 +206,17 @@ export default function SaveLoad(props) {
 						scope: doc.scope
 					});
 				}
+
 				if (doc.type === "var" && loadOptions.type !== "docs") {
 					let name = doc.name;
 					let scope = doc.scope;
 
 					if (doc.scope === "global") {
 						const results = await props.db.find({
-							selector: { scope: doc.name }
+							selector: { scope: name }
 						});
 
-						if (results.length > 0) {
+						if (results.docs.length > 0) {
 							name = `${name}-${varString}`;
 						}
 					}
@@ -202,8 +245,34 @@ export default function SaveLoad(props) {
 						type: "var"
 					});
 				}
+			} else if (loadOptions.addType === "overwrite") {
+			} else if (loadOptions.addType === "replaceAll") {
+				if (doc.type === "document" && loadOptions.type !== "vars") {
+					props.db.put({
+						_id: new Date().toJSON(),
+						name: doc.name,
+						tags: doc.tags,
+						text: doc.text,
+						type: "document",
+						sortKey: doc.sortKey,
+						scope: doc.scope
+					});
+				}
+
+				if (doc.type === "var" && loadOptions.type !== "docs") {
+					props.db.put({
+						_id: new Date().toJSON(),
+						name: doc.name,
+						value: doc.value,
+						scope: doc.scope,
+						type: "var"
+					});
+				}
 			}
-		});
+		}
+
+		setShowModal(false);
+		NotificationManager.success(null, "Loading complete");
 	};
 
 	const checkboxChange = (e) => {
@@ -223,6 +292,11 @@ export default function SaveLoad(props) {
 
 	return (
 		<Container>
+			<Modal show={showModal} backdrop="static" keyboard={false}>
+				<Modal.Header>
+					<Modal.Title>Loading...</Modal.Title>
+				</Modal.Header>
+			</Modal>
 			<Form>
 				<Form.Label>Save Options</Form.Label>
 				<Form.Group className="mb-3" controlId="formBasicManifest">
@@ -313,6 +387,13 @@ export default function SaveLoad(props) {
 						appended to the end.
 					</Alert>
 				)}
+				{loadOptions.addType === "append" && loadOptions.type === "docs" && (
+					<Alert style={{ visibility: "hidden" }}>
+						Any variables or scopes from the loaded file with names that
+						conflict with existing variables or scopes will have a random string
+						appended to the end.
+					</Alert>
+				)}
 				{loadOptions.addType === "overwrite" && (
 					<Alert variant="warning">
 						This will overwrite any{" "}
@@ -340,6 +421,22 @@ export default function SaveLoad(props) {
 					<Button type="submit">Load</Button>
 				</Form.Group>
 			</Form>
+			<ListGroup>
+				<h3>Tips</h3>
+				<ListGroup.Item>
+					You can load nothing with 'Replace All' selected to delete everything
+					from the selected types of items
+				</ListGroup.Item>
+				<ListGroup.Item>
+					If you choose 'Human Readable' when saving, the program will generate
+					a .txt file for each variable scope and a .md file for each document
+				</ListGroup.Item>
+				<ListGroup.Item>
+					Choosing 'Evaluate Templates' makes the human readable documents
+					contain the values from variables, like if you were looking at them in
+					the list view
+				</ListGroup.Item>
+			</ListGroup>
 		</Container>
 	);
 }

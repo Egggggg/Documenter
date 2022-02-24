@@ -15,7 +15,7 @@ import "react-notifications/lib/notifications.css";
 
 PouchDB.plugin(PouchDBFind);
 
-const db = new PouchDB("documents");
+let db = new PouchDB("documents", { auto_compaction: true });
 
 db.createIndex({
 	index: { fields: ["sortKey", "tags", "type"], ddoc: "tags" }

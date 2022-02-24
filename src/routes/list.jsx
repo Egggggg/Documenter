@@ -72,7 +72,7 @@ export default function List(props) {
 
 		props.db
 			.find({
-				limit: 5,
+				limit: 15,
 				skip: 5 * page,
 				include_docs: true,
 				selector: selector,
@@ -133,6 +133,20 @@ export default function List(props) {
 		setPage(page > 0 ? page - 1 : page);
 	};
 
+	const compile = (item) => {
+		try {
+			const exists = Object.keys(vars).includes(item.scope);
+
+			return Handlebars.compile(
+				item.scope && exists
+					? `{{#with ${item.scope}}}${item.text}{{/with}}`
+					: item.text
+			)(vars);
+		} catch (err) {
+			return err.message.replace(/\n/g, "<br />");
+		}
+	};
+
 	return (
 		<Container>
 			{redirect !== null && <Navigate to={redirect} />}
@@ -182,13 +196,7 @@ export default function List(props) {
 							<Card.Body>
 								Sort Key: {item.sortKey}
 								<h3>Content</h3>
-								<MDEditor.Markdown
-									source={Handlebars.compile(
-										!item.scope
-											? item.text
-											: `{{#with ${item.scope}}}${item.text}{{/with}}`
-									)(vars)}
-								/>
+								<MDEditor.Markdown source={compile(item)} />
 								<hr />
 								{item.tags.length > 0 && (
 									<div id="tags">
