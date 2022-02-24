@@ -16,26 +16,26 @@ export default function App() {
 					<Navbar.Toggle aria-controls="basic-navbar-nav" />
 					<Navbar.Collapse id="basic-navbar-nav">
 						<Nav className="me-auto">
-							<Nav.Link>
+							<div as={Nav.Link} className="me-3">
 								<LinkContainer to="/">
 									<Button>Home</Button>
 								</LinkContainer>
-							</Nav.Link>
-							<Nav.Link>
+							</div>
+							<div as={Nav.Link} className="me-3">
 								<LinkContainer to="/create">
 									<Button>Create</Button>
 								</LinkContainer>
-							</Nav.Link>
-							<Nav.Link>
+							</div>
+							<div as={Nav.Link} className="me-3">
 								<LinkContainer to="/vars">
 									<Button>Variables</Button>
 								</LinkContainer>
-							</Nav.Link>
-							<Nav.Link>
+							</div>
+							<div as={Nav.Link} className="me-3">
 								<LinkContainer to="/save-load">
 									<Button>Save/Load</Button>
 								</LinkContainer>
-							</Nav.Link>
+							</div>
 						</Nav>
 					</Navbar.Collapse>
 				</Container>

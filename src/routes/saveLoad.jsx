@@ -196,8 +196,7 @@ export default function SaveLoad(props) {
 
 			if (loadOptions.addType === "append") {
 				if (doc.type === "document" && loadOptions.type !== "vars") {
-					props.db.put({
-						_id: new Date().toJSON(),
+					props.db.post({
 						name: doc.name,
 						tags: doc.tags,
 						text: doc.text,
@@ -205,9 +204,7 @@ export default function SaveLoad(props) {
 						sortKey: doc.sortKey,
 						scope: doc.scope
 					});
-				}
-
-				if (doc.type === "var" && loadOptions.type !== "docs") {
+				} else if (doc.type === "var" && loadOptions.type !== "docs") {
 					let name = doc.name;
 					let scope = doc.scope;
 
@@ -246,10 +243,74 @@ export default function SaveLoad(props) {
 					});
 				}
 			} else if (loadOptions.addType === "overwrite") {
+				if (doc.type === "document" && loadOptions.type !== "vars") {
+					let result;
+
+					try {
+						result = await props.db.get(doc._id);
+						props.db.put({
+							_id: doc._id,
+							_rev: result._rev,
+							name: doc.name,
+							tags: doc.tags,
+							text: doc.text,
+							type: "document",
+							sortKey: doc.sortKey,
+							scope: doc.scope
+						});
+					} catch {
+						props.db.post({
+							name: doc.name,
+							tags: doc.tags,
+							text: doc.text,
+							type: "document",
+							sortKey: doc.sortKey,
+							scope: doc.scope
+						});
+					}
+				} else if (doc.type === "var" && loadOptions.type !== "docs") {
+					if (doc.scope === "global") {
+						const results = await props.db.find({
+							selector: { scope: doc.name }
+						});
+
+						if (results.docs.length > 0) {
+							results.docs.forEach((result) => {
+								props.db.remove(result);
+							});
+						}
+					}
+
+					let results = await props.db.find({
+						selector: { scope: doc.scope, name: doc.name }
+					});
+
+					if (results.docs.length > 0) {
+						results.docs.forEach((result) => {
+							props.db.remove(result);
+						});
+					}
+
+					results = await props.db.find({
+						selector: { scope: "global", name: doc.scope }
+					});
+
+					if (results.docs.length > 0) {
+						results.docs.forEach((result) => {
+							props.db.remove(result);
+						});
+					}
+
+					props.db.post({
+						name: doc.name,
+						value: doc.value,
+						scope: doc.scope,
+						type: "var"
+					});
+				}
 			} else if (loadOptions.addType === "replaceAll") {
 				if (doc.type === "document" && loadOptions.type !== "vars") {
-					props.db.put({
-						_id: new Date().toJSON(),
+					props.db.post({
 						name: doc.name,
 						tags: doc.tags,
 						text: doc.text,
@@ -257,11 +318,8 @@ export default function SaveLoad(props) {
 						sortKey: doc.sortKey,
 						scope: doc.scope
 					});
-				}
-
-				if (doc.type === "var" && loadOptions.type !== "docs") {
-					props.db.put({
-						_id: new Date().toJSON(),
+				} else if (doc.type === "var" && loadOptions.type !== "docs") {
+					props.db.post({
 						name: doc.name,
 						value: doc.value,
 						scope: doc.scope,
@@ -389,9 +447,9 @@ export default function SaveLoad(props) {
 				)}
 				{loadOptions.addType === "append" && loadOptions.type === "docs" && (
 					<Alert style={{ visibility: "hidden" }}>
-						Any variables or scopes from the loaded file with names that
-						conflict with existing variables or scopes will have a random string
-						appended to the end.
+						aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+						aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+						aaaaaaaaaaaaaaaaaaaa
 					</Alert>
 				)}
 				{loadOptions.addType === "overwrite" && (

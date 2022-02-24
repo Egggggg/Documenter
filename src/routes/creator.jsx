@@ -56,16 +56,14 @@ export default function Creator(props) {
 				});
 			});
 		} else {
-			const data = {
+			props.db.post({
 				name: nameValue,
 				tags: tags,
 				text: mdValue,
 				type: "document",
 				sortKey: keyValue,
 				scope: scope
-			};
-
-			props.db.post(data);
+			});
 		}
 
 		if (!leave) {
