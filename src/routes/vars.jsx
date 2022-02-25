@@ -335,7 +335,7 @@ export default function Vars(props) {
 				<OverlayTrigger
 					placement="bottom"
 					overlay={popover(
-						"Scope",
+						"Variable Scope",
 						"Variables can have the same name as long as they're in different scopes. Defaults to 'global'",
 						null,
 						"/create?guide=s2"
@@ -343,7 +343,7 @@ export default function Vars(props) {
 					show={guide === "s1"}
 				>
 					<Form.Group className="mb-3" controlId="formBasicVarScopes">
-						<Form.Label>Scope</Form.Label>
+						<Form.Label>Variable Scope</Form.Label>
 						<Form.Control
 							value={newScope}
 							onChange={newScopeChange}
