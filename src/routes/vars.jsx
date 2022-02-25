@@ -23,7 +23,7 @@ export default function Vars(props) {
 	const [{ search }] = useState(useLocation());
 	const [isTable, setIsTable] = useState(false);
 	const [conflictType, setConflictType] = useState("last");
-	const [tableData, setTableData] = useState([]);
+	const [tableData, setTableData] = useState([{ type: "literal", value: "" }]);
 
 	useEffect(() => {
 		const params = new URLSearchParams(search);
@@ -72,18 +72,25 @@ export default function Vars(props) {
 	const addVar = (e) => {
 		e.preventDefault();
 
-		let scope = newScope;
+		let scope = newScope.trim(" ");
+		let name = newName.trim(" ");
 		let exists = false;
+
+		if (!name) {
+			NotificationManager.error(null, "Please enter a name");
+
+			return;
+		}
 
 		if (!scope) {
 			scope = "global";
 		}
 
 		if (vars[scope]) {
-			exists = Object.keys(vars[scope]).includes(newName);
+			exists = Object.keys(vars[scope]).includes(name);
 		}
 
-		if (scope === "global" && scopes.includes(newName)) {
+		if (scope === "global" && scopes.includes(name)) {
 			NotificationManager.error(
 				null,
 				"There is already a scope with this name"
@@ -108,18 +115,18 @@ export default function Vars(props) {
 		if (exists) {
 			if (!newValue) {
 				props.db
-					.find({ selector: { type: "var", scope: scope, name: newName } })
+					.find({ selector: { type: "var", scope: scope, name: name } })
 					.then((results) => {
 						props.db.remove(results.docs[0]);
 					});
 			} else {
 				props.db
-					.find({ selector: { type: "var", scope: scope, name: newName } })
+					.find({ selector: { type: "var", scope: scope, name: name } })
 					.then((results) => {
 						props.db.put({
 							_id: results.docs[0]._id,
 							_rev: results.docs[0]._rev,
-							name: newName,
+							name: name,
 							value: newValue,
 							scope: scope,
 							type: "var"
@@ -128,7 +135,7 @@ export default function Vars(props) {
 			}
 		} else if (newValue !== "") {
 			props.db.post({
-				name: newName,
+				name: name,
 				value: newValue,
 				scope: scope,
 				type: "var"
@@ -138,11 +145,11 @@ export default function Vars(props) {
 		if (newValue) {
 			setVars({
 				...vars,
-				[scope]: { ...vars[scope], [newName]: newValue }
+				[scope]: { ...vars[scope], [name]: newValue }
 			});
 		} else if (exists) {
 			const newVars = { ...vars };
-			delete newVars[scope][newName];
+			delete newVars[scope][name];
 
 			if (Object.keys(newVars[scope]).length === 0) {
 				delete newVars[scope];
@@ -158,24 +165,31 @@ export default function Vars(props) {
 	const addTable = (e) => {
 		e.preventDefault();
 
-		if (!tableData) {
-			NotificationManager.error(null, "No table data found");
+		let scope = newScope.trim(" ");
+		let name = newName.trim(" ");
+		let exists = false;
+
+		if (!name.trim(" ")) {
+			NotificationManager.error(null, "Please enter a name");
 
 			return;
 		}
 
-		let scope = newScope;
-		let exists = false;
+		if (!tableData[0].value) {
+			NotificationManager.error(null, "Please enter a default value");
+
+			return;
+		}
 
 		if (!scope) {
 			scope = "global";
 		}
 
 		if (vars[scope]) {
-			exists = Object.keys(vars[scope]).includes(newName);
+			exists = Object.keys(vars[scope]).includes(name);
 		}
 
-		if (scope === "global" && scopes.includes(newName)) {
+		if (scope === "global" && scopes.includes(name)) {
 			NotificationManager.error(
 				null,
 				"There is already a scope with this name"
@@ -199,12 +213,12 @@ export default function Vars(props) {
 
 		if (exists) {
 			props.db
-				.find({ selector: { type: "var", scope: scope, name: newName } })
+				.find({ selector: { type: "var", scope: scope, name: name } })
 				.then((results) => {
 					props.db.put({
 						_id: results.docs[0]._id,
 						_rev: results.docs[0]._rev,
-						name: newName,
+						name: name,
 						value: tableData,
 						scope: scope,
 						type: "var"
@@ -212,12 +226,17 @@ export default function Vars(props) {
 				});
 		} else {
 			props.db.post({
-				name: newName,
+				name: name,
 				value: tableData,
 				scope: scope,
 				type: "var"
 			});
 		}
+
+		setVars({...vars, [scope]: {
+			...vars[scope],
+			[name]: tableData
+		})
 	};
 
 	const newNameChange = (e) => {
@@ -260,7 +279,7 @@ export default function Vars(props) {
 			...tableData,
 			[
 				{
-					valType: "literal",
+					type: "literal",
 					value: ""
 				},
 				{
@@ -426,146 +445,248 @@ export default function Vars(props) {
 							</ToggleButton>
 						</ToggleButtonGroup>
 						<br />
-						<Button onClick={addRow}>Add Row</Button>
-						{tableData.map((row, index) => (
-							<Card key={index}>
-								<Card.Header>
-									Row {index}{" "}
-									<Button
-										className="float-end"
-										onClick={() => {
-											const copy = [...tableData];
+						<Form.Group controlId="formBasicTableDefault">
+							<Form.Label>Default Value</Form.Label>
+							<Form.Control
+								value={tableData[0].value}
+								onChange={(e) => {
+									const copy = [...tableData];
 
-											copy.splice(index, 1);
+									copy[0].value = e.target.value;
 
-											setTableData(copy);
-										}}
-									>
-										Delete Row
-									</Button>
-								</Card.Header>
-								<Button className="w-25" onClick={addCondition(index)}>
-									Add Condition
-								</Button>
-								{row.map((item, rowIndex) => {
-									if (rowIndex === 0) return <></>;
+									setTableData(copy);
+								}}
+								type="text"
+								placeholder="Default"
+							/>
+							<ToggleButtonGroup
+								type="radio"
+								value={tableData[0].type}
+								onChange={(val) => {
+									const copy = [...tableData];
 
-									return (
-										<div key={rowIndex}>
-											<Form.Group
-												className="w-25 float-start"
-												controlId={`formBasic${index}${rowIndex}Val1`}
-											>
-												<Form.Label>Value 1</Form.Label>
-												<Form.Control
-													value={item.val1}
-													onChange={(e) => {
-														const copy = [...tableData];
+									copy[0].type = val;
 
-														copy[index][rowIndex].val1 = e.target.value;
-
-														setTableData(copy);
-													}}
-													type="text"
-													placeholder="Value 1"
-												/>
-											</Form.Group>
-											<Form.Group className="w-25 float-start text-center">
-												<Form.Label>Comparison Type</Form.Label>
-												<br />
-												<ToggleButtonGroup
-													type="radio"
-													value={item.comparison}
-													onChange={(val) => {
-														const copy = [...tableData];
-
-														copy[index][rowIndex].comparison = val;
-
-														setTableData(copy);
-													}}
-													name={`formBasic${index}${rowIndex}Comparison`}
-													className="mb-3"
-												>
-													<ToggleButton
-														id={`compare-eq-${index}-${rowIndex}`}
-														variant="outline-primary"
-														value="eq"
-													>
-														==
-													</ToggleButton>
-													<ToggleButton
-														id={`compare-lt-${index}-${rowIndex}`}
-														variant="outline-primary"
-														value="lt"
-													>
-														{"<"}
-													</ToggleButton>
-													<ToggleButton
-														id={`compare-gt-${index}-${rowIndex}`}
-														variant="outline-primary"
-														value="gt"
-													>
-														{">"}
-													</ToggleButton>
-												</ToggleButtonGroup>
-											</Form.Group>
-											<Form.Group
-												className="w-25 float-start"
-												controlId={`formBasic${rowIndex}Val2`}
-											>
-												<Form.Label>Value 2</Form.Label>
-												<Form.Control
-													value={item.val2}
-													onChange={(e) => {
-														const copy = [...tableData];
-
-														copy[index][rowIndex].val2 = e.target.value;
-
-														setTableData(copy);
-													}}
-													type="text"
-													placeholder="Value 2"
-												/>
-											</Form.Group>
-											<Form.Group className="w-25 float-start text-end">
-												<Form.Label>&nbsp;</Form.Label>
-												<br />
-												<Button
-													className="me-3"
-													onClick={() => {
-														const copy = [...tableData];
-
-														copy[index].splice(rowIndex, 1);
-
-														setTableData(copy);
-													}}
-												>
-													Delete Condition
-												</Button>
-											</Form.Group>
-										</div>
-									);
-								})}
-								<Form.Group
-									className="w-25"
-									controlId={`formBasic${index}Value`}
+									setTableData(copy);
+								}}
+								name="formBasicDefaultType"
+								className="mb-3"
+							>
+								<ToggleButton
+									id="default-type-literal"
+									variant="outline-primary"
+									value="literal"
 								>
-									<Form.Label>Evaluates To</Form.Label>
-									<Form.Control
-										value={row[0].value}
-										onChange={(e) => {
-											const copy = [...tableData];
+									Literal
+								</ToggleButton>
+								<ToggleButton
+									id="default-type-var"
+									variant="outline-primary"
+									value="var"
+								>
+									Variable
+								</ToggleButton>
+							</ToggleButtonGroup>
+						</Form.Group>
+						<Button onClick={addRow}>Add Row</Button>
+						{tableData.map((row, index) => {
+							if (index === 0) return null;
+							return (
+								<Card key={index}>
+									<Card.Header>
+										Row {index}
+										<Button
+											className="float-end"
+											onClick={() => {
+												const copy = [...tableData];
 
-											copy[index][0].value = e.target.value;
+												copy.splice(index, 1);
 
-											setTableData(copy);
-										}}
-										type="text"
-										placeholder="Value"
-									/>
-								</Form.Group>
-							</Card>
-						))}
+												setTableData(copy);
+											}}
+										>
+											Delete Row
+										</Button>
+									</Card.Header>
+									<Button className="w-25" onClick={addCondition(index)}>
+										Add Condition
+									</Button>
+									{row.map((item, rowIndex) => {
+										if (rowIndex === 0) return <></>;
+
+										return (
+											<div key={rowIndex}>
+												<Form.Group
+													className="w-25 float-start"
+													controlId={`formBasic${index}${rowIndex}Val1`}
+												>
+													<Form.Label>Value 1</Form.Label>
+													<Form.Control
+														value={item.val1}
+														onChange={(e) => {
+															const copy = [...tableData];
+
+															copy[index][rowIndex].val1 = e.target.value;
+
+															setTableData(copy);
+														}}
+														type="text"
+														placeholder="Value 1"
+													/>
+													<ToggleButtonGroup
+														type="radio"
+														value={item.val1Type}
+														onChange={(val) => {
+															const copy = [...tableData];
+
+															copy[index][rowIndex].val1Type = val;
+
+															setTableData(copy);
+														}}
+														name={`formBasic${index}${rowIndex}Val1Type`}
+														className="mb-3"
+													>
+														<ToggleButton
+															id={`${index}-${rowIndex}-type1-literal`}
+															variant="outline-primary"
+															value="literal"
+														>
+															Literal
+														</ToggleButton>
+														<ToggleButton
+															id={`${index}-${rowIndex}-type1-var`}
+															variant="outline-primary"
+															value="var"
+														>
+															Variable
+														</ToggleButton>
+													</ToggleButtonGroup>
+												</Form.Group>
+												<Form.Group className="w-25 float-start text-center">
+													<Form.Label>Comparison Type</Form.Label>
+													<br />
+													<ToggleButtonGroup
+														type="radio"
+														value={item.comparison}
+														onChange={(val) => {
+															const copy = [...tableData];
+
+															copy[index][rowIndex].comparison = val;
+
+															setTableData(copy);
+														}}
+														name={`formBasic${index}${rowIndex}Comparison`}
+														className="mb-3"
+													>
+														<ToggleButton
+															id={`compare-eq-${index}-${rowIndex}`}
+															variant="outline-primary"
+															value="eq"
+														>
+															==
+														</ToggleButton>
+														<ToggleButton
+															id={`compare-lt-${index}-${rowIndex}`}
+															variant="outline-primary"
+															value="lt"
+														>
+															{"<"}
+														</ToggleButton>
+														<ToggleButton
+															id={`compare-gt-${index}-${rowIndex}`}
+															variant="outline-primary"
+															value="gt"
+														>
+															{">"}
+														</ToggleButton>
+													</ToggleButtonGroup>
+												</Form.Group>
+												<Form.Group
+													className="w-25 float-start"
+													controlId={`formBasic${rowIndex}Val2`}
+												>
+													<Form.Label>Value 2</Form.Label>
+													<Form.Control
+														value={item.val2}
+														onChange={(e) => {
+															const copy = [...tableData];
+
+															copy[index][rowIndex].val2 = e.target.value;
+
+															setTableData(copy);
+														}}
+														type="text"
+														placeholder="Value 2"
+													/>
+													<ToggleButtonGroup
+														type="radio"
+														value={item.val2Type}
+														onChange={(val) => {
+															const copy = [...tableData];
+
+															copy[index][rowIndex].val2Type = val;
+
+															setTableData(copy);
+														}}
+														name={`formBasic${index}${rowIndex}Val2Type`}
+														className="mb-3"
+													>
+														<ToggleButton
+															id={`${index}-${rowIndex}-type2-literal`}
+															variant="outline-primary"
+															value="literal"
+														>
+															Literal
+														</ToggleButton>
+														<ToggleButton
+															id={`${index}-${rowIndex}-type2-var`}
+															variant="outline-primary"
+															value="var"
+														>
+															Variable
+														</ToggleButton>
+													</ToggleButtonGroup>
+												</Form.Group>
+												<Form.Group className="w-25 float-start text-end">
+													<Form.Label>&nbsp;</Form.Label>
+													<br />
+													<Button
+														className="me-3"
+														onClick={() => {
+															const copy = [...tableData];
+
+															copy[index].splice(rowIndex, 1);
+
+															setTableData(copy);
+														}}
+													>
+														Delete Condition
+													</Button>
+												</Form.Group>
+											</div>
+										);
+									})}
+									<Form.Group
+										className="w-25"
+										controlId={`formBasic${index}Value`}
+									>
+										<Form.Label>Evaluates To</Form.Label>
+										<Form.Control
+											value={row[0].value}
+											onChange={(e) => {
+												const copy = [...tableData];
+
+												copy[index][0].value = e.target.value;
+
+												setTableData(copy);
+											}}
+											type="text"
+											placeholder="Value"
+										/>
+									</Form.Group>
+								</Card>
+							);
+						})}
 					</>
 				)}
 				<br />
