@@ -9,6 +9,8 @@ import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Popover from "react-bootstrap/Popover";
+import ToggleButton from "react-bootstrap/ToggleButton";
+import ToggleButtonGroup from "react-bootstrap/ToggleButtonGroup";
 
 export default function Vars(props) {
 	const [vars, setVars] = useState({});
@@ -19,6 +21,9 @@ export default function Vars(props) {
 	const [guide, setGuide] = useState(null);
 	const [redirect, setRedirect] = useState(null);
 	const [{ search }] = useState(useLocation());
+	const [isTable, setIsTable] = useState(false);
+	const [conflictType, setConflictType] = useState("last");
+	const [tableData, setTableData] = useState([]);
 
 	useEffect(() => {
 		const params = new URLSearchParams(search);
@@ -87,18 +92,16 @@ export default function Vars(props) {
 			return;
 		}
 
-		// if vars[scope] isn't an object or undefined, it is a variable
+		// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
 		if (
 			vars.global &&
 			!["object", "undefined"].includes(typeof vars.global[scope])
 		) {
-			console.log(typeof vars[scope]);
-			console.log(scope);
-
 			NotificationManager.error(
 				null,
 				"There is a variable in the global scope with this scope name"
 			);
+
 			return;
 		}
 
@@ -113,7 +116,7 @@ export default function Vars(props) {
 				props.db
 					.find({ selector: { type: "var", scope: scope, name: newName } })
 					.then((results) => {
-						return props.db.put({
+						props.db.put({
 							_id: results.docs[0]._id,
 							_rev: results.docs[0]._rev,
 							name: newName,
@@ -124,8 +127,7 @@ export default function Vars(props) {
 					});
 			}
 		} else if (newValue !== "") {
-			props.db.put({
-				_id: new Date().toJSON(),
+			props.db.post({
 				name: newName,
 				value: newValue,
 				scope: scope,
@@ -151,6 +153,71 @@ export default function Vars(props) {
 
 		setNewName("");
 		setNewValue("");
+	};
+
+	const addTable = (e) => {
+		e.preventDefault();
+
+		if (!tableData) {
+			NotificationManager.error(null, "No table data found");
+
+			return;
+		}
+
+		let scope = newScope;
+		let exists = false;
+
+		if (!scope) {
+			scope = "global";
+		}
+
+		if (vars[scope]) {
+			exists = Object.keys(vars[scope]).includes(newName);
+		}
+
+		if (scope === "global" && scopes.includes(newName)) {
+			NotificationManager.error(
+				null,
+				"There is already a scope with this name"
+			);
+
+			return;
+		}
+
+		// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
+		if (
+			vars.global &&
+			!["object", "undefined"].includes(typeof vars.global[scope])
+		) {
+			NotificationManager.error(
+				null,
+				"There is a variable in the global scope with this scope name"
+			);
+
+			return;
+		}
+
+		if (exists) {
+			props.db
+				.find({ selector: { type: "var", scope: scope, name: newName } })
+				.then((results) => {
+					props.db.put({
+						_id: results.docs[0]._id,
+						_rev: results.docs[0]._rev,
+						name: newName,
+						value: tableData,
+						scope: scope,
+						type: "var"
+					});
+				});
+		} else {
+			props.db.post({
+				name: newName,
+				value: tableData,
+				scope: scope,
+				type: "var"
+			});
+		}
 	};
 
 	const newNameChange = (e) => {
@@ -188,6 +255,39 @@ export default function Vars(props) {
 		);
 	};
 
+	const addRow = () => {
+		setTableData([
+			...tableData,
+			[
+				{
+					valType: "literal",
+					value: ""
+				},
+				{
+					val1Type: "var",
+					val1: "",
+					comparison: "eq",
+					val2Type: "literal",
+					val2: ""
+				}
+			]
+		]);
+	};
+
+	const addCondition = (index) => () => {
+		const copy = [...tableData];
+
+		copy[index].push({
+			val1Type: "var",
+			val1: "",
+			comparison: "eq",
+			val2Type: "literal",
+			val2: ""
+		});
+
+		setTableData(copy);
+	};
+
 	return (
 		<Container>
 			{redirect && <Navigate to={redirect} />}
@@ -195,7 +295,7 @@ export default function Vars(props) {
 				placement="bottom"
 				overlay={popover(
 					"Engine",
-					"This application uses the <a href='https://handlebarsjs.com/'>HandlebarsJS</a> templating engine for inserting variables, and supports all of its features",
+					"This application uses the <a href='https://handlebarsjs.com/'>Handlebars</a> templating engine for inserting variables, and supports all of its features",
 					null,
 					"v2"
 				)}
@@ -203,7 +303,15 @@ export default function Vars(props) {
 			>
 				<div></div>
 			</OverlayTrigger>
-			<Form onSubmit={addVar}>
+			<Form
+				onSubmit={(e) => {
+					if (isTable) {
+						addTable(e);
+					} else {
+						addVar(e);
+					}
+				}}
+			>
 				<OverlayTrigger
 					placement="bottom"
 					overlay={popover(
@@ -227,26 +335,6 @@ export default function Vars(props) {
 				<OverlayTrigger
 					placement="bottom"
 					overlay={popover(
-						"Variable Value",
-						"This is what will be shown wherever the variable is used",
-						"v2",
-						"v4"
-					)}
-					show={guide === "v3"}
-				>
-					<Form.Group className="mb-3" controlId="formBasicVarValue">
-						<Form.Label>Variable Value</Form.Label>
-						<Form.Control
-							value={newValue}
-							onChange={newValueChange}
-							type="text"
-							placeholder="Value"
-						/>
-					</Form.Group>
-				</OverlayTrigger>
-				<OverlayTrigger
-					placement="bottom"
-					overlay={popover(
 						"Scope",
 						"Variables can have the same name as long as they're in different scopes. Defaults to 'global'",
 						null,
@@ -254,7 +342,7 @@ export default function Vars(props) {
 					)}
 					show={guide === "s1"}
 				>
-					<Form.Group className="mb3" controlId="formBasicVarScopes">
+					<Form.Group className="mb-3" controlId="formBasicVarScopes">
 						<Form.Label>Scope</Form.Label>
 						<Form.Control
 							value={newScope}
@@ -264,9 +352,226 @@ export default function Vars(props) {
 						/>
 					</Form.Group>
 				</OverlayTrigger>
+				<Form.Label>Variable Type</Form.Label>
 				<br />
+				<ToggleButtonGroup
+					type="radio"
+					value={isTable}
+					onChange={(val) => setIsTable(val)}
+					name="isTable"
+					className="mb-2"
+				>
+					<ToggleButton
+						id="option-not-table"
+						variant="outline-primary"
+						value={false}
+					>
+						Basic
+					</ToggleButton>
+					<ToggleButton
+						id="option-table"
+						variant="outline-primary"
+						value={true}
+					>
+						Table
+					</ToggleButton>
+				</ToggleButtonGroup>
 				<br />
-				<Button type="submit">Add</Button>
+				{!isTable && (
+					<OverlayTrigger
+						placement="bottom"
+						overlay={popover(
+							"Variable Value",
+							"This is what will be shown wherever the variable is used",
+							"v2",
+							"v4"
+						)}
+						show={guide === "v3"}
+					>
+						<Form.Group className="mb-3" controlId="formBasicVarValue">
+							<Form.Label>Variable Value</Form.Label>
+							<Form.Control
+								value={newValue}
+								onChange={newValueChange}
+								type="text"
+								placeholder="Value"
+							/>
+						</Form.Group>
+					</OverlayTrigger>
+				)}
+				{isTable && (
+					<>
+						<Form.Label>Conflict Resolution</Form.Label>
+						<br />
+						<ToggleButtonGroup
+							type="radio"
+							value={conflictType}
+							onChange={(val) => setConflictType(val)}
+							name="conflictType"
+							className="mb-2"
+						>
+							<ToggleButton
+								id="option-conflict-last"
+								variant="outline-primary"
+								value="last"
+							>
+								Last
+							</ToggleButton>
+							<ToggleButton
+								id="option-conflict-first"
+								variant="outline-primary"
+								value="first"
+							>
+								First
+							</ToggleButton>
+						</ToggleButtonGroup>
+						<br />
+						<Button onClick={addRow}>Add Row</Button>
+						{tableData.map((row, index) => (
+							<Card key={index}>
+								<Card.Header>
+									Row {index}{" "}
+									<Button
+										className="float-end"
+										onClick={() => {
+											const copy = [...tableData];
+
+											copy.splice(index, 1);
+
+											setTableData(copy);
+										}}
+									>
+										Delete Row
+									</Button>
+								</Card.Header>
+								<Button className="w-25" onClick={addCondition(index)}>
+									Add Condition
+								</Button>
+								{row.map((item, rowIndex) => {
+									if (rowIndex === 0) return <></>;
+
+									return (
+										<div key={rowIndex}>
+											<Form.Group
+												className="w-25 float-start"
+												controlId={`formBasic${index}${rowIndex}Val1`}
+											>
+												<Form.Label>Value 1</Form.Label>
+												<Form.Control
+													value={item.val1}
+													onChange={(e) => {
+														const copy = [...tableData];
+
+														copy[index][rowIndex].val1 = e.target.value;
+
+														setTableData(copy);
+													}}
+													type="text"
+													placeholder="Value 1"
+												/>
+											</Form.Group>
+											<Form.Group className="w-25 float-start text-center">
+												<Form.Label>Comparison Type</Form.Label>
+												<br />
+												<ToggleButtonGroup
+													type="radio"
+													value={item.comparison}
+													onChange={(val) => {
+														const copy = [...tableData];
+
+														copy[index][rowIndex].comparison = val;
+
+														setTableData(copy);
+													}}
+													name={`formBasic${index}${rowIndex}Comparison`}
+													className="mb-3"
+												>
+													<ToggleButton
+														id={`compare-eq-${index}-${rowIndex}`}
+														variant="outline-primary"
+														value="eq"
+													>
+														==
+													</ToggleButton>
+													<ToggleButton
+														id={`compare-lt-${index}-${rowIndex}`}
+														variant="outline-primary"
+														value="lt"
+													>
+														{"<"}
+													</ToggleButton>
+													<ToggleButton
+														id={`compare-gt-${index}-${rowIndex}`}
+														variant="outline-primary"
+														value="gt"
+													>
+														{">"}
+													</ToggleButton>
+												</ToggleButtonGroup>
+											</Form.Group>
+											<Form.Group
+												className="w-25 float-start"
+												controlId={`formBasic${rowIndex}Val2`}
+											>
+												<Form.Label>Value 2</Form.Label>
+												<Form.Control
+													value={item.val2}
+													onChange={(e) => {
+														const copy = [...tableData];
+
+														copy[index][rowIndex].val2 = e.target.value;
+
+														setTableData(copy);
+													}}
+													type="text"
+													placeholder="Value 2"
+												/>
+											</Form.Group>
+											<Form.Group className="w-25 float-start text-end">
+												<Form.Label>&nbsp;</Form.Label>
+												<br />
+												<Button
+													className="me-3"
+													onClick={() => {
+														const copy = [...tableData];
+
+														copy[index].splice(rowIndex, 1);
+
+														setTableData(copy);
+													}}
+												>
+													Delete Condition
+												</Button>
+											</Form.Group>
+										</div>
+									);
+								})}
+								<Form.Group
+									className="w-25"
+									controlId={`formBasic${index}Value`}
+								>
+									<Form.Label>Evaluates To</Form.Label>
+									<Form.Control
+										value={row[0].value}
+										onChange={(e) => {
+											const copy = [...tableData];
+
+											copy[index][0].value = e.target.value;
+
+											setTableData(copy);
+										}}
+										type="text"
+										placeholder="Value"
+									/>
+								</Form.Group>
+							</Card>
+						))}
+					</>
+				)}
+				<br />
+				<Button className="my-3" type="submit">
+					Add
+				</Button>
 			</Form>
 			<br />
 			<br />
