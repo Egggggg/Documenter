@@ -198,7 +198,7 @@ export default function List(props) {
 	return (
 		<Container>
 			{redirect !== null && <Navigate to={redirect} />}
-			<div className="w-30 text-center">
+			<div className="w-25 text-center">
 				<DropdownButton size="sm" onSelect={selectSortOrder} title={sortOrder}>
 					<Dropdown.Item eventKey="Ascending">Ascending</Dropdown.Item>
 					<Dropdown.Item eventKey="Descending">Descending</Dropdown.Item>
@@ -217,7 +217,6 @@ export default function List(props) {
 					{filters.map((filter) => {
 						return (
 							<ListGroup.Item
-								className="w-25"
 								action
 								onClick={deleteFilter(filter)}
 								key={filter}
@@ -231,8 +230,9 @@ export default function List(props) {
 			<br />
 			{items.length === 0 && (
 				<h3>
-					There's nothing here yet! To add a document, go to the{" "}
-					<NavLink to="/create">create</NavLink> page
+					There's nothing here yet! If you would like help, follow the{" "}
+					<NavLink to="/create?guide=yes">guide</NavLink>, or to just add a
+					document go to the <NavLink to="/create">create</NavLink> page
 				</h3>
 			)}
 			{items.map((item, index) => {

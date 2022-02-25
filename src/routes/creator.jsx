@@ -7,6 +7,7 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
+import Popover from "react-bootstrap/Popover";
 
 export default function Creator(props) {
 	const [mdValue, setMdValue] = useState("# Boy howdy!");
@@ -19,14 +20,20 @@ export default function Creator(props) {
 
 	const [{ search }] = useState(useLocation());
 	const [id, setId] = useState(null);
+	const [guide, setGuide] = useState(0);
 
 	const [redirect, setRedirect] = useState(false);
 
 	useEffect(() => {
 		const params = new URLSearchParams(search);
 		const idParam = params.get("id");
+		const guideParam = params.get("guide");
 
 		setId(idParam);
+
+		if (!isNaN(guideParam)) {
+			setGuide(parseInt(guideParam));
+		}
 
 		if (idParam) {
 			props.db.get(idParam, { include_docs: true }).then((doc) => {
@@ -102,10 +109,6 @@ export default function Creator(props) {
 		setTagValue(e.target.value);
 	};
 
-	const nameValueChange = (e) => {
-		setNameValue(e.target.value);
-	};
-
 	const mdEditorDown = (e) => {
 		if ((e.ctrlKey || e.metaKey) && e.key === "s") {
 			e.preventDefault();
@@ -113,13 +116,12 @@ export default function Creator(props) {
 		}
 	};
 
-	const keyValueChange = (e) => {
-		setKeyValue(e.target.value);
-	};
-
-	const scopeChange = (e) => {
-		setScope(e.target.value);
-	};
+	const namePopover = (
+		<Popover>
+			<Popover.Header as="h3">Enter a name</Popover.Header>
+			<Popover.Body>Enter a name here for your new document</Popover.Body>
+		</Popover>
+	);
 
 	return (
 		<Form onSubmit={save(true)}>
@@ -129,7 +131,7 @@ export default function Creator(props) {
 				<Form.Control
 					type="text"
 					value={nameValue}
-					onChange={nameValueChange}
+					onChange={(e) => setTagValue(e.target.value)}
 					placeholder="Name"
 				/>
 			</Form.Group>
@@ -138,7 +140,7 @@ export default function Creator(props) {
 				<Form.Control
 					type="text"
 					value={keyValue}
-					onChange={keyValueChange}
+					onChange={(e) => setKeyValue(e.target.value)}
 					placeholder="Sort key"
 				/>
 			</Form.Group>
@@ -147,7 +149,7 @@ export default function Creator(props) {
 				<Form.Control
 					type="text"
 					value={scope}
-					onChange={scopeChange}
+					onChange={(e) => setScope(e.target.value)}
 					placeholder="Scope"
 				/>
 			</Form.Group>
