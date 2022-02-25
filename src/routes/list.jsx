@@ -198,20 +198,21 @@ export default function List(props) {
 	return (
 		<Container>
 			{redirect !== null && <Navigate to={redirect} />}
-			<div className="w-25 text-center">
+			<div className="w-25">
+				{pageList()}
 				<DropdownButton size="sm" onSelect={selectSortOrder} title={sortOrder}>
 					<Dropdown.Item eventKey="Ascending">Ascending</Dropdown.Item>
 					<Dropdown.Item eventKey="Descending">Descending</Dropdown.Item>
 				</DropdownButton>
-				{pageList()}
 				<form onSubmit={addFilter}>
-					<input type="submit" value="+" />
 					<input
 						type="text"
 						value={filterValue}
 						onChange={filterValueChange}
 						placeholder="Filter"
+						className="w-75"
 					/>
+					<Button type="submit">Add</Button>
 				</form>
 				<ListGroup>
 					{filters.map((filter) => {
@@ -231,7 +232,7 @@ export default function List(props) {
 			{items.length === 0 && (
 				<h3>
 					There's nothing here yet! If you would like help, follow the{" "}
-					<NavLink to="/create?guide=yes">guide</NavLink>, or to just add a
+					<NavLink to="/create?guide=c1">guide</NavLink>, or to just add a
 					document go to the <NavLink to="/create">create</NavLink> page
 				</h3>
 			)}
