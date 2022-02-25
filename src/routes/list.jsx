@@ -198,7 +198,7 @@ export default function List(props) {
 	return (
 		<Container>
 			{redirect !== null && <Navigate to={redirect} />}
-			<div className="w-25 text-center">
+			<div className="w-30 text-center">
 				<DropdownButton size="sm" onSelect={selectSortOrder} title={sortOrder}>
 					<Dropdown.Item eventKey="Ascending">Ascending</Dropdown.Item>
 					<Dropdown.Item eventKey="Descending">Descending</Dropdown.Item>

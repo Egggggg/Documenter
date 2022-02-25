@@ -27,6 +27,11 @@ export default function App() {
 								</LinkContainer>
 							</div>
 							<div as={Nav.Link} className="me-3">
+								<LinkContainer to="/guide">
+									<Button>Guide</Button>
+								</LinkContainer>
+							</div>
+							<div as={Nav.Link} className="me-3">
 								<LinkContainer to="/vars">
 									<Button>Variables</Button>
 								</LinkContainer>
