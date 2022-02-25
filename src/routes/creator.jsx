@@ -162,7 +162,7 @@ export default function Creator(props) {
 						<Form.Control
 							type="text"
 							value={nameValue}
-							onChange={(e) => setTagValue(e.target.value)}
+							onChange={(e) => setNameValue(e.target.value)}
 							placeholder="Name"
 						/>
 					</Form.Group>
@@ -191,7 +191,7 @@ export default function Creator(props) {
 					placement="bottom"
 					overlay={popover(
 						"Scope",
-						"Without setting scope, you will need to access the scope of a scoped variable (meaning the scope is not the default of 'global') before you can use it, like this: <code>{{scope.name}}</code>. With a scope, you access variables from the same scope with just their name. If you enter a scope, you can still access global variables or variables from other scopes by prepending it with <code>../</code>, like this <code>{{../otherScope.name}}</code> or <code>{{../globalVar}}</code>",
+						"Without setting scope, you will need to access the scope of a scoped variable (meaning the scope is not the default of 'global') before you can use it, like this: <code>{{scope.name}}</code>. With a scope, you access variables from the same scope with just their name. If you enter a scope, you can still access global variables or variables from other scopes by prepending them with <code>../</code>, like this <code>{{../otherScope.name}}</code> or <code>{{../globalVar}}</code>",
 						"/vars?guide=s1",
 						"done",
 						true
@@ -281,7 +281,7 @@ export default function Creator(props) {
 						placement="top"
 						overlay={popover(
 							"Tags",
-							"Tags are used for filtering your documents in the list view. Each document can have any number of tags, and you can delete them by clicking them on this page",
+							"Tags are used to filter your documents in the list view. Each document can have any number of tags, and you can delete them by clicking them on this page",
 							"c3",
 							"c5"
 						)}
