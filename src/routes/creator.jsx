@@ -24,7 +24,7 @@ export default function Creator(props) {
 	const [id, setId] = useState(null);
 	const [guide, setGuide] = useState(null);
 
-	const [redirect, setRedirect] = useState(false);
+	const [redirect, setRedirect] = useState(null);
 
 	useEffect(() => {
 		const params = new URLSearchParams(search);
@@ -43,6 +43,12 @@ export default function Creator(props) {
 			});
 		}
 	}, [props.db, search]);
+
+	useEffect(() => {
+		if (guide && guide.startsWith("/vars")) {
+			setRedirect(guide);
+		}
+	}, [guide]);
 
 	const save = (leave) => (e) => {
 		if (e) {
@@ -85,7 +91,9 @@ export default function Creator(props) {
 			NotificationManager.success(null, "Saved", 750);
 		}
 
-		setRedirect(leave);
+		if (leave) {
+			setRedirect("/");
+		}
 	};
 
 	const addTag = (e) => {
@@ -114,14 +122,22 @@ export default function Creator(props) {
 		}
 	};
 
-	const popover = (title, text, prev, next) => {
+	const popover = (title, text, prev, next, done) => {
 		return (
 			<Popover style={{ maxWidth: "60%" }}>
 				<Popover.Header as="h3">{title}</Popover.Header>
 				<Popover.Body dangerouslySetInnerHTML={{ __html: text }}></Popover.Body>
 				<div className="text-end me-3 mb-3">
-					{prev && <Button onClick={() => setGuide(prev)}>Previous</Button>}
-					{next && <Button onClick={() => setGuide(next)}>Next</Button>}
+					{prev && (
+						<Button className="me-3" onClick={() => setGuide(prev)}>
+							Previous
+						</Button>
+					)}
+					{next && (
+						<Button onClick={() => setGuide(next)}>
+							{done ? "Finish" : "Next"}
+						</Button>
+					)}
 				</div>
 			</Popover>
 		);
@@ -130,7 +146,7 @@ export default function Creator(props) {
 	return (
 		<Container>
 			<Form onSubmit={save(true)}>
-				{redirect && <Navigate to="/" />}
+				{redirect && <Navigate to={redirect} />}
 				<OverlayTrigger
 					placement="bottom"
 					overlay={popover(
@@ -171,15 +187,27 @@ export default function Creator(props) {
 						/>
 					</Form.Group>
 				</OverlayTrigger>
-				<Form.Group className="mb-3" controlId="formBasicScope">
-					<Form.Label>Scope</Form.Label>
-					<Form.Control
-						type="text"
-						value={scope}
-						onChange={(e) => setScope(e.target.value)}
-						placeholder="Scope"
-					/>
-				</Form.Group>
+				<OverlayTrigger
+					placement="bottom"
+					overlay={popover(
+						"Scope",
+						"Without setting scope, you will need to access the scope of a scoped variable (meaning the scope is not the default of 'global') before you can use it, like this: <code>{{scope.name}}</code>. With a scope, you access variables from the same scope with just their name. If you enter a scope, you can still access global variables or variables from other scopes by prepending it with <code>../</code>, like this <code>{{../otherScope.name}}</code> or <code>{{../globalVar}}</code>",
+						"/vars?guide=s1",
+						"done",
+						true
+					)}
+					show={guide === "s2"}
+				>
+					<Form.Group className="mb-3" controlId="formBasicScope">
+						<Form.Label>Scope</Form.Label>
+						<Form.Control
+							type="text"
+							value={scope}
+							onChange={(e) => setScope(e.target.value)}
+							placeholder="Scope"
+						/>
+					</Form.Group>
+				</OverlayTrigger>
 				<OverlayTrigger
 					placement="top"
 					overlay={popover(
@@ -189,6 +217,57 @@ export default function Creator(props) {
 						"c4"
 					)}
 					show={guide === "c3"}
+				>
+					<div></div>
+				</OverlayTrigger>
+				<OverlayTrigger
+					placement="top"
+					overlay={popover(
+						"Usage",
+						"To use a variable in the content of a document, put the name between {{}}, like this: <code>{{name}}</code>",
+						"/vars?guide=v4",
+						"done",
+						true
+					)}
+					show={guide === "v5"}
+				>
+					<div></div>
+				</OverlayTrigger>
+				<OverlayTrigger
+					placement="top"
+					overlay={popover(
+						"Usage",
+						"To use a variable in the content of a document, put the name between {{}}, like this: <code>{{name}}</code>",
+						"/vars?guide=v4",
+						"done",
+						true
+					)}
+					show={guide === "v5"}
+				>
+					<div></div>
+				</OverlayTrigger>
+				<OverlayTrigger
+					placement="top"
+					overlay={popover(
+						"Helper Functions",
+						"You can check equality of values with our three custom helpers: <code>eq</code> (equals), <code>lt</code> (less than),  and <code>gt</code> (greater than). They each take two arguments, and check the first one against the second one. You can use variables in these helpers. You use them like this: <code>{{#eq&nbsp;3&nbsp;varName}}&nbsp;{{/eq}}</code>",
+						null,
+						"h2"
+					)}
+					show={guide === "h1"}
+				>
+					<div></div>
+				</OverlayTrigger>
+				<OverlayTrigger
+					placement="top"
+					overlay={popover(
+						"Conditionals",
+						"Where the helper functions really shine is when used with conditionals in a subexpression. If you do this, for example with <code>{{#if&nbsp;(lt&nbsp;3&nbsp;4)}}Hi!{{/if}}</code>, the content within the conditional will only show up if the helper returns <code>true</code>",
+						"h1",
+						"done",
+						true
+					)}
+					show={guide === "h2"}
 				>
 					<div></div>
 				</OverlayTrigger>
@@ -202,7 +281,7 @@ export default function Creator(props) {
 						placement="top"
 						overlay={popover(
 							"Tags",
-							"Tags are used for filtering your documents in the list view. Each document can have any number of tags, and you can delete them by clicking on them while on this page",
+							"Tags are used for filtering your documents in the list view. Each document can have any number of tags, and you can delete them by clicking them on this page",
 							"c3",
 							"c5"
 						)}
@@ -231,7 +310,19 @@ export default function Creator(props) {
 						})}
 					</ListGroup>
 				</Card>
-				<Button type="submit">Create</Button>
+				<OverlayTrigger
+					placement="right"
+					overlay={popover(
+						"Create",
+						"That's all for this guide! Click here to create your document",
+						"c4",
+						"done",
+						true
+					)}
+					show={guide === "c5"}
+				>
+					<Button type="submit">Create</Button>
+				</OverlayTrigger>
 				<span>(or Ctrl+S in the text editor)</span>
 			</Form>
 		</Container>

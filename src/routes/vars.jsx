@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { NotificationManager } from "react-notifications";
+import { useLocation, Navigate } from "react-router-dom";
 
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Container from "react-bootstrap/Container";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Popover from "react-bootstrap/Popover";
 
 export default function Vars(props) {
 	const [vars, setVars] = useState({});
@@ -13,6 +16,14 @@ export default function Vars(props) {
 	const [newValue, setNewValue] = useState("");
 	const [newScope, setNewScope] = useState("");
 	const [scopes, setScopes] = useState([]);
+	const [guide, setGuide] = useState(null);
+	const [redirect, setRedirect] = useState(null);
+	const [{ search }] = useState(useLocation());
+
+	useEffect(() => {
+		const params = new URLSearchParams(search);
+		setGuide(params.get("guide"));
+	}, [search]);
 
 	useEffect(() => {
 		props.db
@@ -46,6 +57,12 @@ export default function Vars(props) {
 				setVars(newVars);
 			});
 	}, [props.db, scopes]);
+
+	useEffect(() => {
+		if (guide && guide.startsWith("/create")) {
+			setRedirect(guide);
+		}
+	}, [guide]);
 
 	const addVar = (e) => {
 		e.preventDefault();
@@ -154,42 +171,117 @@ export default function Vars(props) {
 		setNewScope(key === "global" ? "" : key);
 	};
 
+	const popover = (title, text, prev, next) => {
+		return (
+			<Popover style={{ maxWidth: "60%" }}>
+				<Popover.Header as="h3">{title}</Popover.Header>
+				<Popover.Body dangerouslySetInnerHTML={{ __html: text }}></Popover.Body>
+				<div className="text-end me-3 mb-3">
+					{prev && (
+						<Button className="me-3" onClick={() => setGuide(prev)}>
+							Previous
+						</Button>
+					)}
+					{next && <Button onClick={() => setGuide(next)}>Next</Button>}
+				</div>
+			</Popover>
+		);
+	};
+
 	return (
 		<Container>
+			{redirect && <Navigate to={redirect} />}
+			<OverlayTrigger
+				placement="bottom"
+				overlay={popover(
+					"Engine",
+					"This application uses the <a href='https://handlebarsjs.com/'>HandlebarsJS</a> templating engine for inserting variables, and supports all of its features",
+					null,
+					"v2"
+				)}
+				show={guide === "v1"}
+			>
+				<div></div>
+			</OverlayTrigger>
 			<Form onSubmit={addVar}>
-				<Form.Group className="mb-3" controlId="formBasicVarName">
-					<Form.Label>Variable Name</Form.Label>
-					<Form.Control
-						value={newName}
-						onChange={newNameChange}
-						type="text"
-						placeholder="Name"
-					/>
-				</Form.Group>
-				<Form.Group className="mb-3" controlId="formBasicVarValue">
-					<Form.Label>Variable Value</Form.Label>
-					<Form.Control
-						value={newValue}
-						onChange={newValueChange}
-						type="text"
-						placeholder="Value"
-					/>
-				</Form.Group>
-				<Form.Group className="mb3" controlId="formBasicVarScopes">
-					<Form.Label>Scope</Form.Label>
-					<Form.Control
-						value={newScope}
-						onChange={newScopeChange}
-						type="text"
-						placeholder="Scope"
-					/>
-				</Form.Group>
+				<OverlayTrigger
+					placement="bottom"
+					overlay={popover(
+						"Variable Name",
+						"This is how you'll refer to your variable in the content of documents. Entering the name of an existing variable will edit that variable",
+						"v1",
+						"v3"
+					)}
+					show={guide === "v2"}
+				>
+					<Form.Group className="mb-3" controlId="formBasicVarName">
+						<Form.Label>Variable Name</Form.Label>
+						<Form.Control
+							value={newName}
+							onChange={newNameChange}
+							type="text"
+							placeholder="Name"
+						/>
+					</Form.Group>
+				</OverlayTrigger>
+				<OverlayTrigger
+					placement="bottom"
+					overlay={popover(
+						"Variable Value",
+						"This is what will be shown wherever the variable is used",
+						"v2",
+						"v4"
+					)}
+					show={guide === "v3"}
+				>
+					<Form.Group className="mb-3" controlId="formBasicVarValue">
+						<Form.Label>Variable Value</Form.Label>
+						<Form.Control
+							value={newValue}
+							onChange={newValueChange}
+							type="text"
+							placeholder="Value"
+						/>
+					</Form.Group>
+				</OverlayTrigger>
+				<OverlayTrigger
+					placement="bottom"
+					overlay={popover(
+						"Scope",
+						"Variables can have the same name as long as they're in different scopes. Defaults to 'global'",
+						null,
+						"/create?guide=s2"
+					)}
+					show={guide === "s1"}
+				>
+					<Form.Group className="mb3" controlId="formBasicVarScopes">
+						<Form.Label>Scope</Form.Label>
+						<Form.Control
+							value={newScope}
+							onChange={newScopeChange}
+							type="text"
+							placeholder="Scope"
+						/>
+					</Form.Group>
+				</OverlayTrigger>
 				<br />
 				<br />
 				<Button type="submit">Add</Button>
 			</Form>
 			<br />
 			<br />
+			<OverlayTrigger
+				placement="top"
+				overlay={popover(
+					"Variable List",
+					"Here is where all the variables you add will show up. You can click one to edit it, and after that you can delete it by saving it with an empty value",
+					"v3",
+					"/create?guide=v5"
+				)}
+				show={guide === "v4"}
+			>
+				<h3>Variable List</h3>
+			</OverlayTrigger>
 			{vars["global"] && (
 				<Card>
 					<Card.Header>global</Card.Header>
