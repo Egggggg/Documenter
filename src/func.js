@@ -1,6 +1,6 @@
 export function evaluateTable(table, vars, globalRoot, name, scope) {
-	// the first entry of a table is always the default value and conflictType entry
-	if (table[0].conflictType === "last") {
+	// the first entry of a table is always the default value and priority entry
+	if (table[0].priority === "last") {
 		for (let row = table.length - 1; row > 0; row--) {
 			try {
 				if (evaluateRow(row, table, vars, globalRoot, name, scope)) {
@@ -22,7 +22,7 @@ export function evaluateTable(table, vars, globalRoot, name, scope) {
 		}
 	}
 
-	return ["couldn't evaluate", null];
+	return [table[0].value, -1];
 }
 
 function evaluateRow(row, table, vars, globalRoot, name, scope) {
