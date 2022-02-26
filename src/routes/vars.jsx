@@ -12,6 +12,7 @@ import Popover from "react-bootstrap/Popover";
 import Table from "react-bootstrap/Table";
 import ToggleButton from "react-bootstrap/ToggleButton";
 import ToggleButtonGroup from "react-bootstrap/ToggleButtonGroup";
+import { evaluateTable } from "../func";
 
 export default function Vars(props) {
 	const [vars, setVars] = useState({});
@@ -340,8 +341,15 @@ export default function Vars(props) {
 		setTableData(copy);
 	};
 
-	const listTable = (name, table) => {
+	const listTable = (name, scope, table) => {
 		const comparisons = { eq: "==", lt: "<", gt: ">" };
+		const [output, outputIndex] = evaluateTable(
+			table,
+			vars,
+			false,
+			name,
+			scope
+		);
 
 		return (
 			<>
@@ -361,12 +369,20 @@ export default function Vars(props) {
 							{table.map((row, index) => {
 								if (index === 0) {
 									return (
-										<tr>
-											<td>DEFAULT</td>
-											<td>DEFAULT</td>
-											<td>DEFAULT</td>
-											<td>{row.value}</td>
-										</tr>
+										<>
+											<tr>
+												<td>DEFAULT</td>
+												<td>DEFAULT</td>
+												<td>DEFAULT</td>
+												<td>{row.value}</td>
+											</tr>
+											<tr className="bg-primary">
+												<td>OUTPUT</td>
+												<td>OUTPUT</td>
+												<td>OUTPUT</td>
+												<td>{output}</td>
+											</tr>
+										</>
 									);
 								}
 
@@ -385,9 +401,55 @@ export default function Vars(props) {
 												const path = val1.split(".");
 
 												if (path.length === 1) {
-													val1 = `${val1} (${vars["global"][path[0]]})`;
+													if (scope === "global" && name === path[0]) {
+														val1 = `recursion error (${val1})`;
+													} else if (typeof vars.global[path[0]] !== "string") {
+														if (vars.global && vars.global[path[0]]) {
+															val1 = `${val1} (${
+																evaluateTable(
+																	vars.global[path[0]],
+																	vars,
+																	false,
+																	name,
+																	scope
+																)[0]
+															})`;
+														} else {
+															val1 = `missing deps (${val1})`;
+														}
+													} else {
+														if (vars.global && vars.global[path[0]]) {
+															val1 = `${val1} (${vars.global[path[0]]})`;
+														} else {
+															val1 = `missing deps (${val1})`;
+														}
+													}
 												} else if (path.length === 2) {
-													val1 = `${val1} (${vars[path[0]][path[1]]})`;
+													if (scope === path[0] && name === path[1]) {
+														val1 = `recursion error (${val1})`;
+													} else if (
+														typeof vars[path[0]][path[1]] !== "string"
+													) {
+														if (vars[path[0]] && vars[path[0]][path[1]]) {
+															val1 = `${val1} (${
+																evaluateTable(
+																	vars[path[0]][path[1]],
+																	vars,
+																	false,
+																	name,
+																	scope
+																)[0]
+															})`;
+														} else {
+															val1 = `missing deps (${val1})`;
+														}
+													} else {
+														if (vars[path[0]] && vars[path[0]][path[1]]) {
+															val1 = `${val1} (${vars[path[0]][path[1]]})`;
+														} else {
+															val1 = `missing deps (${val1})`;
+														}
+													}
 												}
 											}
 
@@ -395,9 +457,55 @@ export default function Vars(props) {
 												const path = val2.split(".");
 
 												if (path.length === 1) {
-													val2 = `${val2} (${vars["global"][path[0]]})`;
+													if (scope === "global" && name === path[0]) {
+														val2 = `${val2} (recursion error)`;
+													} else if (typeof vars.global[path[0]] !== "string") {
+														if (vars.global && vars.global[path[0]]) {
+															val2 = `${val2} (${
+																evaluateTable(
+																	vars.global[path[1]],
+																	vars,
+																	false,
+																	name,
+																	scope
+																)[0]
+															})`;
+														} else {
+															val2 = `missing deps (${val2})`;
+														}
+													} else {
+														if (vars.global) {
+															val2 = `${val2} (${vars.global[path[1]]})`;
+														} else {
+															val2 = `missing deps (${val2})`;
+														}
+													}
 												} else if (path.length === 2) {
-													val2 = `${val2} (${vars[path[0]][path[1]]})`;
+													if (scope === path[0] && name === path[1]) {
+														val2 = `${val2} (recursion error)`;
+													} else if (
+														typeof vars[path[0]][path[1]] !== "string"
+													) {
+														if (vars[path[0]] && vars[path[0]][path[1]]) {
+															val1 = `${val2} (${
+																evaluateTable(
+																	vars[path[0]][path[1]],
+																	vars,
+																	false,
+																	name,
+																	scope
+																)[0]
+															})`;
+														} else {
+															val2 = `missing deps (${val2})`;
+														}
+													} else {
+														if (vars[path[0]] && vars[path[0]][path[1]]) {
+															val2 = `${val2} (${vars[path[0]][path[1]]})`;
+														} else {
+															val2 = `missing deps (${val2})`;
+														}
+													}
 												}
 											}
 
@@ -413,7 +521,9 @@ export default function Vars(props) {
 											<td></td>
 											<td></td>
 											<td></td>
-											<td>{row[0].value}</td>
+											<td className={outputIndex === index ? "bg-primary" : ""}>
+												{row[0].value}
+											</td>
 										</tr>
 									</>
 								);
@@ -852,7 +962,7 @@ export default function Vars(props) {
 								// table var
 								return (
 									<ListGroup.Item key={name}>
-										{listTable(name, vars["global"][name])}
+										{listTable(name, "global", vars["global"][name])}
 									</ListGroup.Item>
 								);
 							}
@@ -886,7 +996,7 @@ export default function Vars(props) {
 										// table var
 										return (
 											<ListGroup.Item key={name}>
-												{listTable(name, vars[key][name])}
+												{listTable(name, key, vars[key][name])}
 											</ListGroup.Item>
 										);
 									}
