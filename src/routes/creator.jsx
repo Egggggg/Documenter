@@ -2,6 +2,8 @@ import MDEditor from "@uiw/react-md-editor";
 import { useState, useEffect } from "react";
 import { useLocation, Navigate } from "react-router-dom";
 import { NotificationManager } from "react-notifications";
+import Handlebars from "handlebars/dist/handlebars.min.js";
+import { evaluateTable } from "../func";
 
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -16,6 +18,7 @@ export default function Creator(props) {
 	const [nameValue, setNameValue] = useState("Default Name");
 	const [keyValue, setKeyValue] = useState("1");
 	const [scope, setScope] = useState("");
+	const [vars, setVars] = useState({});
 
 	const [tagValue, setTagValue] = useState("");
 	const [tags, setTags] = useState([]);
@@ -25,6 +28,63 @@ export default function Creator(props) {
 	const [guide, setGuide] = useState(null);
 
 	const [redirect, setRedirect] = useState(null);
+	useEffect(() => {
+		props.db
+			.find({
+				include_docs: true,
+				selector: { type: "var" }
+			})
+			.then((results) => {
+				let newVars = {};
+
+				results.docs.forEach((doc) => {
+					if (doc.scope === "global") {
+						newVars = { ...newVars, [doc.name]: doc.value };
+					} else {
+						newVars[doc.scope] = {
+							...newVars[doc.scope],
+							[doc.name]: doc.value
+						};
+					}
+				});
+
+				let newTables = {};
+
+				results.docs.forEach((doc) => {
+					if (typeof doc.value !== "string") {
+						console.log(doc.value);
+
+						if (doc.scope === "global") {
+							newTables = {
+								...newTables,
+								[doc.name]: evaluateTable(
+									doc.value,
+									newVars,
+									true,
+									doc.name,
+									doc.scope
+								)[0]
+							};
+						} else {
+							newTables[doc.scope] = {
+								...newTables[doc.scope],
+								[doc.name]: evaluateTable(
+									doc.value,
+									newVars,
+									true,
+									doc.name,
+									doc.scope
+								)[0]
+							};
+						}
+					}
+				});
+
+				newVars = { ...newVars, ...newTables };
+
+				setVars(newVars);
+			});
+	}, [props.db]);
 
 	useEffect(() => {
 		const params = new URLSearchParams(search);
@@ -141,6 +201,18 @@ export default function Creator(props) {
 				</div>
 			</Popover>
 		);
+	};
+
+	const compile = (item) => {
+		try {
+			const exists = Object.keys(vars).includes(scope);
+
+			return Handlebars.compile(
+				scope && exists ? `{{#with ${scope}}}${mdValue}{{/with}}` : mdValue
+			)(vars);
+		} catch (err) {
+			return err.message.replace(/\n/g, "<br />");
+		}
 	};
 
 	return (
@@ -275,6 +347,7 @@ export default function Creator(props) {
 					onKeyDown={mdEditorDown}
 					value={mdValue}
 					onChange={setMdValue}
+					previewOptions={{}}
 				/>
 				<Card>
 					<OverlayTrigger
@@ -324,6 +397,29 @@ export default function Creator(props) {
 					<Button type="submit">Create</Button>
 				</OverlayTrigger>
 				<span>(or Ctrl+S in the text editor)</span>
+				<Card className="mt-3">
+					<Card.Header>
+						<h1 className="float-start">{nameValue}</h1>
+						<Button className="float-end">Delete</Button>
+						<Button className="float-end">Edit</Button>
+					</Card.Header>
+					<Card.Body>
+						Sort Key: {keyValue}
+						<h3>Content</h3>
+						<MDEditor.Markdown source={compile(mdValue)} />
+						<hr />
+						{tags.length > 0 && (
+							<div id="tags">
+								<h3>Tags</h3>
+								<ListGroup>
+									{tags.map((tag) => (
+										<ListGroup.Item key={tag}>{tag}</ListGroup.Item>
+									))}
+								</ListGroup>
+							</div>
+						)}
+					</Card.Body>
+				</Card>
 			</Form>
 		</Container>
 	);

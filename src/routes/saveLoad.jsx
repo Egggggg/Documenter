@@ -3,6 +3,7 @@ import FileSaver from "file-saver";
 import { useState } from "react";
 import Handlebars from "handlebars/dist/handlebars.min.js";
 import { NotificationManager } from "react-notifications";
+import { evaluateTable } from "../func";
 
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -35,6 +36,7 @@ export default function SaveLoad(props) {
 		let varFolder;
 
 		const vars = {};
+		const evalVars = {};
 		let varFiles = {};
 
 		if (saveOptions.readable) {
@@ -51,6 +53,7 @@ export default function SaveLoad(props) {
 					if (saveOptions.eval) {
 						if (doc.scope === "global") {
 							vars[doc.name] = doc.value;
+							evaluateTable();
 						} else {
 							vars[doc.scope] = { ...vars[doc.scope], [doc.name]: doc.value };
 						}
@@ -67,7 +70,7 @@ export default function SaveLoad(props) {
 					}
 
 					if (saveOptions.manifest) {
-						manifest[`${doc.name}--${doc._id}`] = {
+						manifest[doc._id] = {
 							_id: doc._id,
 							name: doc.name,
 							value: doc.value,
@@ -94,11 +97,20 @@ export default function SaveLoad(props) {
 				return props.db.find({ selector: { type: "document" } });
 			})
 			.then((results) => {
+				let evaluatedVars = vars;
+
+				if (saveOptions.readable && saveOptions.eval) {
+					Object.keys(vars).forEach((key) => {
+						if (typeof evaluatedVars[key] === "string") {
+							return;
+						}
+					});
+				}
+
 				results.docs.forEach((doc) => {
-					const slug = `${doc.name}--${doc._id}`;
 					let text = doc.text;
 
-					if (saveOptions.eval && saveOptions.readable) {
+					if (saveOptions.readable && saveOptions.eval) {
 						text = Handlebars.compile(
 							!doc.scope
 								? doc.text
@@ -118,7 +130,7 @@ export default function SaveLoad(props) {
 					}
 
 					if (saveOptions.manifest) {
-						manifest[slug] = {
+						manifest[doc._id] = {
 							_id: doc._id,
 							name: doc.name,
 							tags: doc.tags,
