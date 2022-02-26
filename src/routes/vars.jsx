@@ -25,7 +25,7 @@ export default function Vars(props) {
 	const [{ search }] = useState(useLocation());
 	const [isTable, setIsTable] = useState(false);
 	const [tableData, setTableData] = useState([
-		{ type: "literal", value: "", conflictType: "last" }
+		{ type: "literal", value: "", priority: "last" }
 	]);
 
 	useEffect(() => {
@@ -76,7 +76,7 @@ export default function Vars(props) {
 		if (isTable) {
 			setNewValue("");
 		} else {
-			setTableData([{ type: "literal", value: "", conflictType: "last" }]);
+			setTableData([{ type: "literal", value: "", priority: "last" }]);
 		}
 	}, [isTable]);
 
@@ -341,15 +341,57 @@ export default function Vars(props) {
 		setTableData(copy);
 	};
 
+	const evalValue = (val, name, scope) => {
+		const path = val.split(".");
+
+		if (path.length === 1) {
+			if (scope === "global" && name === path[0]) {
+				val = `recursion error (${val})`;
+			} else if (typeof vars.global[path[0]] !== "string") {
+				if (vars.global && vars.global[path[0]]) {
+					val = `${val} (${
+						evaluateTable(vars.global[path[0]], vars, false, name, scope)[0]
+					})`;
+				} else {
+					val = `missing deps (${val})`;
+				}
+			} else {
+				if (vars.global && vars.global[path[0]]) {
+					val = `${val} (${vars.global[path[0]]})`;
+				} else {
+					val = `missing deps (${val})`;
+				}
+			}
+		} else if (path.length === 2) {
+			if (scope === path[0] && name === path[1]) {
+				val = `recursion error (${val})`;
+			} else if (typeof vars[path[0]][path[1]] !== "string") {
+				if (vars[path[0]] && vars[path[0]][path[1]]) {
+					val = `${val} (${
+						evaluateTable(vars[path[0]][path[1]], vars, false, name, scope)[0]
+					})`;
+				} else {
+					val = `missing deps (${val})`;
+				}
+			} else {
+				if (vars[path[0]] && vars[path[0]][path[1]]) {
+					val = `${val} (${vars[path[0]][path[1]]})`;
+				} else {
+					val = `missing deps (${val})`;
+				}
+			}
+		}
+
+		return val;
+	};
+
 	const listTable = (name, scope, table) => {
 		const comparisons = { eq: "==", lt: "<", gt: ">" };
-		const [output, outputIndex] = evaluateTable(
-			table,
-			vars,
-			false,
-			name,
-			scope
-		);
+		let [output, outputIndex] = evaluateTable(table, vars, false, name, scope);
+
+		if (table[outputIndex][0].type === "var") {
+			output = evalValue(output);
+		}
 
 		return (
 			<>
@@ -374,9 +416,15 @@ export default function Vars(props) {
 												<td>DEFAULT</td>
 												<td>DEFAULT</td>
 												<td>DEFAULT</td>
-												<td>{row.value}</td>
+												<td
+													className={
+														outputIndex === -1 ? "bg-primary text-light" : ""
+													}
+												>
+													{row.value}
+												</td>
 											</tr>
-											<tr className="bg-primary">
+											<tr className="bg-primary text-light">
 												<td>OUTPUT</td>
 												<td>OUTPUT</td>
 												<td>OUTPUT</td>
@@ -389,8 +437,8 @@ export default function Vars(props) {
 								return (
 									<>
 										{row.map((condition, rowIndex) => {
-											if (index === 0) {
-												return null;
+											if (rowIndex === 0) {
+												return <></>;
 											}
 
 											let val1 = condition.val1;
@@ -398,115 +446,11 @@ export default function Vars(props) {
 											let comparison = comparisons[condition.comparison];
 
 											if (condition.val1Type === "var") {
-												const path = val1.split(".");
-
-												if (path.length === 1) {
-													if (scope === "global" && name === path[0]) {
-														val1 = `recursion error (${val1})`;
-													} else if (typeof vars.global[path[0]] !== "string") {
-														if (vars.global && vars.global[path[0]]) {
-															val1 = `${val1} (${
-																evaluateTable(
-																	vars.global[path[0]],
-																	vars,
-																	false,
-																	name,
-																	scope
-																)[0]
-															})`;
-														} else {
-															val1 = `missing deps (${val1})`;
-														}
-													} else {
-														if (vars.global && vars.global[path[0]]) {
-															val1 = `${val1} (${vars.global[path[0]]})`;
-														} else {
-															val1 = `missing deps (${val1})`;
-														}
-													}
-												} else if (path.length === 2) {
-													if (scope === path[0] && name === path[1]) {
-														val1 = `recursion error (${val1})`;
-													} else if (
-														typeof vars[path[0]][path[1]] !== "string"
-													) {
-														if (vars[path[0]] && vars[path[0]][path[1]]) {
-															val1 = `${val1} (${
-																evaluateTable(
-																	vars[path[0]][path[1]],
-																	vars,
-																	false,
-																	name,
-																	scope
-																)[0]
-															})`;
-														} else {
-															val1 = `missing deps (${val1})`;
-														}
-													} else {
-														if (vars[path[0]] && vars[path[0]][path[1]]) {
-															val1 = `${val1} (${vars[path[0]][path[1]]})`;
-														} else {
-															val1 = `missing deps (${val1})`;
-														}
-													}
-												}
+												val1 = evalValue(val1, name, scope);
 											}
 
 											if (condition.val2Type === "var") {
-												const path = val2.split(".");
-
-												if (path.length === 1) {
-													if (scope === "global" && name === path[0]) {
-														val2 = `${val2} (recursion error)`;
-													} else if (typeof vars.global[path[0]] !== "string") {
-														if (vars.global && vars.global[path[0]]) {
-															val2 = `${val2} (${
-																evaluateTable(
-																	vars.global[path[1]],
-																	vars,
-																	false,
-																	name,
-																	scope
-																)[0]
-															})`;
-														} else {
-															val2 = `missing deps (${val2})`;
-														}
-													} else {
-														if (vars.global) {
-															val2 = `${val2} (${vars.global[path[1]]})`;
-														} else {
-															val2 = `missing deps (${val2})`;
-														}
-													}
-												} else if (path.length === 2) {
-													if (scope === path[0] && name === path[1]) {
-														val2 = `${val2} (recursion error)`;
-													} else if (
-														typeof vars[path[0]][path[1]] !== "string"
-													) {
-														if (vars[path[0]] && vars[path[0]][path[1]]) {
-															val1 = `${val2} (${
-																evaluateTable(
-																	vars[path[0]][path[1]],
-																	vars,
-																	false,
-																	name,
-																	scope
-																)[0]
-															})`;
-														} else {
-															val2 = `missing deps (${val2})`;
-														}
-													} else {
-														if (vars[path[0]] && vars[path[0]][path[1]]) {
-															val2 = `${val2} (${vars[path[0]][path[1]]})`;
-														} else {
-															val2 = `missing deps (${val2})`;
-														}
-													}
-												}
+												val2 = evalValue(val2, name, scope);
 											}
 
 											return (
@@ -521,8 +465,12 @@ export default function Vars(props) {
 											<td></td>
 											<td></td>
 											<td></td>
-											<td className={outputIndex === index ? "bg-primary" : ""}>
-												{row[0].value}
+											<td
+												className={
+													outputIndex === index ? "bg-primary text-light" : ""
+												}
+											>
+												{output}
 											</td>
 										</tr>
 									</>
@@ -532,6 +480,66 @@ export default function Vars(props) {
 					</Table>
 				</details>
 			</>
+		);
+	};
+
+	const valEntry = (
+		controlId,
+		buttonsName,
+		title,
+		placeholder,
+		getter,
+		setter,
+		prependId,
+		data,
+		className,
+		valKey,
+		typeKey
+	) => {
+		return (
+			<Form.Group className={className} controlId={controlId}>
+				<Form.Label>{title}</Form.Label>
+				<Form.Control
+					value={getter(data)[valKey]}
+					onChange={(e) => {
+						const copy = [...tableData];
+
+						setter(copy)[valKey] = e.target.value;
+
+						setTableData(copy);
+					}}
+					type="text"
+					placeholder={placeholder}
+				/>
+				<ToggleButtonGroup
+					type="radio"
+					value={getter(data)[typeKey]}
+					onChange={(val) => {
+						const copy = [...tableData];
+
+						setter(copy)[typeKey] = val;
+
+						setTableData(copy);
+					}}
+					name={buttonsName}
+					className="mb-3"
+				>
+					<ToggleButton
+						id={`${prependId}-type-literal`}
+						variant="outline-primary"
+						value="literal"
+					>
+						Literal
+					</ToggleButton>
+					<ToggleButton
+						id={`${prependId}-type-var`}
+						variant="outline-primary"
+						value="var"
+					>
+						Variable
+					</ToggleButton>
+				</ToggleButtonGroup>
+			</Form.Group>
 		);
 	};
 
@@ -648,30 +656,30 @@ export default function Vars(props) {
 				)}
 				{isTable && (
 					<>
-						<Form.Label>Conflict Resolution</Form.Label>
+						<Form.Label>Priority</Form.Label>
 						<br />
 						<ToggleButtonGroup
 							type="radio"
-							value={tableData[0].conflictType}
+							value={tableData[0].priority}
 							onChange={(val) => {
 								const copy = [...tableData];
 
-								copy[0].conflictType = val;
+								copy[0].priority = val;
 
 								setTableData(copy);
 							}}
-							name="conflictType"
+							name="priority"
 							className="mb-2"
 						>
 							<ToggleButton
-								id="option-conflict-last"
+								id="option-priority-last"
 								variant="outline-primary"
 								value="last"
 							>
 								Last
 							</ToggleButton>
 							<ToggleButton
-								id="option-conflict-first"
+								id="option-priority-first"
 								variant="outline-primary"
 								value="first"
 							>
@@ -679,49 +687,19 @@ export default function Vars(props) {
 							</ToggleButton>
 						</ToggleButtonGroup>
 						<br />
-						<Form.Group controlId="formBasicTableDefault">
-							<Form.Label>Default Value</Form.Label>
-							<Form.Control
-								value={tableData[0].value}
-								onChange={(e) => {
-									const copy = [...tableData];
-
-									copy[0].value = e.target.value;
-
-									setTableData(copy);
-								}}
-								type="text"
-								placeholder="Default"
-							/>
-							<ToggleButtonGroup
-								type="radio"
-								value={tableData[0].type}
-								onChange={(val) => {
-									const copy = [...tableData];
-
-									copy[0].type = val;
-
-									setTableData(copy);
-								}}
-								name="formBasicDefaultType"
-								className="mb-3"
-							>
-								<ToggleButton
-									id="default-type-literal"
-									variant="outline-primary"
-									value="literal"
-								>
-									Literal
-								</ToggleButton>
-								<ToggleButton
-									id="default-type-var"
-									variant="outline-primary"
-									value="var"
-								>
-									Variable
-								</ToggleButton>
-							</ToggleButtonGroup>
-						</Form.Group>
+						{valEntry(
+							"formBasicTableDefault",
+							"formBasicDefaultType",
+							"Default Value",
+							"Default",
+							() => tableData[0],
+							(table) => table[0],
+							"default",
+							null,
+							"",
+							"value",
+							"type"
+						)}
 						<Button onClick={addRow}>Add Row</Button>
 						{tableData.map((row, index) => {
 							if (index === 0) return null;
@@ -750,52 +728,19 @@ export default function Vars(props) {
 
 										return (
 											<div key={rowIndex}>
-												<Form.Group
-													className="w-25 float-start"
-													controlId={`formBasic${index}${rowIndex}Val1`}
-												>
-													<Form.Label>Value 1</Form.Label>
-													<Form.Control
-														value={item.val1}
-														onChange={(e) => {
-															const copy = [...tableData];
-
-															copy[index][rowIndex].val1 = e.target.value;
-
-															setTableData(copy);
-														}}
-														type="text"
-														placeholder="Value 1"
-													/>
-													<ToggleButtonGroup
-														type="radio"
-														value={item.val1Type}
-														onChange={(val) => {
-															const copy = [...tableData];
-
-															copy[index][rowIndex].val1Type = val;
-
-															setTableData(copy);
-														}}
-														name={`formBasic${index}${rowIndex}Val1Type`}
-														className="mb-3"
-													>
-														<ToggleButton
-															id={`${index}-${rowIndex}-type1-literal`}
-															variant="outline-primary"
-															value="literal"
-														>
-															Literal
-														</ToggleButton>
-														<ToggleButton
-															id={`${index}-${rowIndex}-type1-var`}
-															variant="outline-primary"
-															value="var"
-														>
-															Variable
-														</ToggleButton>
-													</ToggleButtonGroup>
-												</Form.Group>
+												{valEntry(
+													`formBasic${index}${rowIndex}Val1`,
+													`formBasic${index}${rowIndex}Val1Type`,
+													"Value 1",
+													"Value 1",
+													(data) => data,
+													(table) => table[index][rowIndex],
+													`${index}-${rowIndex}-val1`,
+													item,
+													"w-25 float-start",
+													"val1",
+													"val1Type"
+												)}
 												<Form.Group className="w-25 float-start text-center">
 													<Form.Label>Comparison Type</Form.Label>
 													<br />
@@ -835,52 +780,19 @@ export default function Vars(props) {
 														</ToggleButton>
 													</ToggleButtonGroup>
 												</Form.Group>
-												<Form.Group
-													className="w-25 float-start"
-													controlId={`formBasic${rowIndex}Val2`}
-												>
-													<Form.Label>Value 2</Form.Label>
-													<Form.Control
-														value={item.val2}
-														onChange={(e) => {
-															const copy = [...tableData];
-
-															copy[index][rowIndex].val2 = e.target.value;
-
-															setTableData(copy);
-														}}
-														type="text"
-														placeholder="Value 2"
-													/>
-													<ToggleButtonGroup
-														type="radio"
-														value={item.val2Type}
-														onChange={(val) => {
-															const copy = [...tableData];
-
-															copy[index][rowIndex].val2Type = val;
-
-															setTableData(copy);
-														}}
-														name={`formBasic${index}${rowIndex}Val2Type`}
-														className="mb-3"
-													>
-														<ToggleButton
-															id={`${index}-${rowIndex}-type2-literal`}
-															variant="outline-primary"
-															value="literal"
-														>
-															Literal
-														</ToggleButton>
-														<ToggleButton
-															id={`${index}-${rowIndex}-type2-var`}
-															variant="outline-primary"
-															value="var"
-														>
-															Variable
-														</ToggleButton>
-													</ToggleButtonGroup>
-												</Form.Group>
+												{valEntry(
+													`formBasic${index}${rowIndex}Val2`,
+													`formBasic${index}${rowIndex}Val2Type`,
+													"Value 2",
+													"Value 2",
+													(data) => data,
+													(table) => table[index][rowIndex],
+													`${index}-${rowIndex}-val2`,
+													item,
+													"w-25 float-start",
+													"val2",
+													"val2Type"
+												)}
 												<Form.Group className="w-25 float-start text-end">
 													<Form.Label>&nbsp;</Form.Label>
 													<br />
@@ -900,24 +812,19 @@ export default function Vars(props) {
 											</div>
 										);
 									})}
-									<Form.Group
-										className="w-25"
-										controlId={`formBasic${index}Value`}
-									>
-										<Form.Label>Output</Form.Label>
-										<Form.Control
-											value={row[0].value}
-											onChange={(e) => {
-												const copy = [...tableData];
-
-												copy[index][0].value = e.target.value;
-
-												setTableData(copy);
-											}}
-											type="text"
-											placeholder="Value"
-										/>
-									</Form.Group>
+									{valEntry(
+										`formBasic${index}Output`,
+										`formBasic${index}ValueType`,
+										"Output",
+										"Output",
+										(data) => data[0],
+										(table) => table[index][0],
+										`${index}-output`,
+										row,
+										"w-25",
+										"value",
+										"type"
+									)}
 								</Card>
 							);
 						})}

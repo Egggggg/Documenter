@@ -61,8 +61,6 @@ export default function List(props) {
 
 				results.docs.forEach((doc) => {
 					if (typeof doc.value !== "string") {
-						console.log(doc.value);
-
 						if (doc.scope === "global") {
 							newTables = {
 								...newTables,
