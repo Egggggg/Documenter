@@ -9,6 +9,7 @@ import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Popover from "react-bootstrap/Popover";
+import Table from "react-bootstrap/Table";
 import ToggleButton from "react-bootstrap/ToggleButton";
 import ToggleButtonGroup from "react-bootstrap/ToggleButtonGroup";
 
@@ -22,8 +23,9 @@ export default function Vars(props) {
 	const [redirect, setRedirect] = useState(null);
 	const [{ search }] = useState(useLocation());
 	const [isTable, setIsTable] = useState(false);
-	const [conflictType, setConflictType] = useState("last");
-	const [tableData, setTableData] = useState([{ type: "literal", value: "" }]);
+	const [tableData, setTableData] = useState([
+		{ type: "literal", value: "", conflictType: "last" }
+	]);
 
 	useEffect(() => {
 		const params = new URLSearchParams(search);
@@ -68,6 +70,14 @@ export default function Vars(props) {
 			setRedirect(guide);
 		}
 	}, [guide]);
+
+	useEffect(() => {
+		if (isTable) {
+			setNewValue("");
+		} else {
+			setTableData([{ type: "literal", value: "", conflictType: "last" }]);
+		}
+	}, [isTable]);
 
 	const addVar = (e) => {
 		e.preventDefault();
@@ -175,6 +185,12 @@ export default function Vars(props) {
 			return;
 		}
 
+		if (name.includes(".") || name.includes("/")) {
+			NotificationManager.error(null, "Name cannot include '.' or '/'");
+
+			return;
+		}
+
 		if (!tableData[0].value) {
 			NotificationManager.error(null, "Please enter a default value");
 
@@ -233,10 +249,19 @@ export default function Vars(props) {
 			});
 		}
 
-		setVars({...vars, [scope]: {
-			...vars[scope],
-			[name]: tableData
-		})
+		setVars({
+			...vars,
+			[scope]: {
+				...vars[scope],
+				[name]: tableData
+			}
+		});
+
+		console.log(tableData);
+
+		setNewName("");
+		setNewScope("");
+		setTableData([{ type: "literal", value: "" }]);
 	};
 
 	const newNameChange = (e) => {
@@ -252,9 +277,17 @@ export default function Vars(props) {
 	};
 
 	const selectVar = (key, name) => () => {
-		setNewName(name);
-		setNewValue(vars[key][name]);
-		setNewScope(key === "global" ? "" : key);
+		if (typeof vars[key][name] === "string") {
+			setIsTable(false);
+			setNewName(name);
+			setNewScope(key === "global" ? "" : key);
+			setNewValue(vars[key][name]);
+		} else {
+			setIsTable(true);
+			setNewName(name);
+			setNewScope(key === "global" ? "" : key);
+			setTableData(vars[key][name]);
+		}
 	};
 
 	const popover = (title, text, prev, next) => {
@@ -305,6 +338,91 @@ export default function Vars(props) {
 		});
 
 		setTableData(copy);
+	};
+
+	const listTable = (name, table) => {
+		const comparisons = { eq: "==", lt: "<", gt: ">" };
+
+		return (
+			<>
+				<h3 onClick={selectVar("global", name)}>{name}</h3>
+				<details>
+					<summary>Table</summary>
+					<Table striped bordered hover size="sm">
+						<thead>
+							<tr>
+								<th>Argument 1</th>
+								<th>Comparison</th>
+								<th>Argument 2</th>
+								<th>Output</th>
+							</tr>
+						</thead>
+						<tbody>
+							{table.map((row, index) => {
+								if (index === 0) {
+									return (
+										<tr>
+											<td>DEFAULT</td>
+											<td>DEFAULT</td>
+											<td>DEFAULT</td>
+											<td>{row.value}</td>
+										</tr>
+									);
+								}
+
+								return (
+									<>
+										{row.map((condition, rowIndex) => {
+											if (index === 0) {
+												return null;
+											}
+
+											let val1 = condition.val1;
+											let val2 = condition.val2;
+											let comparison = comparisons[condition.comparison];
+
+											if (condition.val1Type === "var") {
+												const path = val1.split(".");
+
+												if (path.length === 1) {
+													val1 = `${val1} (${vars["global"][path[0]]})`;
+												} else if (path.length === 2) {
+													val1 = `${val1} (${vars[path[0]][path[1]]})`;
+												}
+											}
+
+											if (condition.val2Type === "var") {
+												const path = val2.split(".");
+
+												if (path.length === 1) {
+													val2 = `${val2} (${vars["global"][path[0]]})`;
+												} else if (path.length === 2) {
+													val2 = `${val2} (${vars[path[0]][path[1]]})`;
+												}
+											}
+
+											return (
+												<tr key={rowIndex}>
+													<td>{val1}</td>
+													<td>{comparison}</td>
+													<td>{val2}</td>
+												</tr>
+											);
+										})}
+										<tr>
+											<td></td>
+											<td></td>
+											<td></td>
+											<td>{row[0].value}</td>
+										</tr>
+									</>
+								);
+							})}
+						</tbody>
+					</Table>
+				</details>
+			</>
+		);
 	};
 
 	return (
@@ -424,8 +542,14 @@ export default function Vars(props) {
 						<br />
 						<ToggleButtonGroup
 							type="radio"
-							value={conflictType}
-							onChange={(val) => setConflictType(val)}
+							value={tableData[0].conflictType}
+							onChange={(val) => {
+								const copy = [...tableData];
+
+								copy[0].conflictType = val;
+
+								setTableData(copy);
+							}}
 							name="conflictType"
 							className="mb-2"
 						>
@@ -670,7 +794,7 @@ export default function Vars(props) {
 										className="w-25"
 										controlId={`formBasic${index}Value`}
 									>
-										<Form.Label>Evaluates To</Form.Label>
+										<Form.Label>Output</Form.Label>
 										<Form.Control
 											value={row[0].value}
 											onChange={(e) => {
@@ -712,37 +836,63 @@ export default function Vars(props) {
 				<Card>
 					<Card.Header>global</Card.Header>
 					<ListGroup>
-						{Object.keys(vars["global"]).map((key) => (
-							<ListGroup.Item
-								key={key}
-								action
-								onClick={selectVar("global", key)}
-							>
-								{`${key}: ${vars["global"][key]}`}
-							</ListGroup.Item>
-						))}
+						{Object.keys(vars["global"]).map((name) => {
+							if (typeof vars["global"][name] === "string") {
+								// basic var
+								return (
+									<ListGroup.Item
+										key={name}
+										action
+										onClick={selectVar("global", name)}
+									>
+										{`${name}: ${vars["global"][name]}`}
+									</ListGroup.Item>
+								);
+							} else {
+								// table var
+								return (
+									<ListGroup.Item key={name}>
+										{listTable(name, vars["global"][name])}
+									</ListGroup.Item>
+								);
+							}
+						})}
 					</ListGroup>
 				</Card>
 			)}
 			{Object.keys(vars).length > 0 &&
 				Object.keys(vars).map((key) => {
+					if (key === "global") return null;
+
 					return (
-						key !== "global" && (
-							<Card key={key}>
-								<Card.Header>{key}</Card.Header>
-								<ListGroup>
-									{Object.keys(vars[key]).map((name) => (
-										<ListGroup.Item
-											key={name}
-											action
-											onClick={selectVar(key, name)}
-										>
-											{`${name}: ${vars[key][name]}`}
-										</ListGroup.Item>
-									))}
-								</ListGroup>
-							</Card>
-						)
+						<Card key={key}>
+							<Card.Header>{key}</Card.Header>
+							<ListGroup>
+								{Object.keys(vars[key]).map((name) => {
+									console.log(vars[key][name]);
+
+									if (typeof vars[key][name] === "string") {
+										// basic var
+										return (
+											<ListGroup.Item
+												key={name}
+												action
+												onClick={selectVar(key, name)}
+											>
+												{`${name}: ${vars[key][name]}`}
+											</ListGroup.Item>
+										);
+									} else {
+										// table var
+										return (
+											<ListGroup.Item key={name}>
+												{listTable(name, vars[key][name])}
+											</ListGroup.Item>
+										);
+									}
+								})}
+							</ListGroup>
+						</Card>
 					);
 				})}
 		</Container>
