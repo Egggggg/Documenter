@@ -52,8 +52,6 @@ export default function Creator(props) {
 
 				results.docs.forEach((doc) => {
 					if (typeof doc.value !== "string") {
-						console.log(doc.value);
-
 						if (doc.scope === "global") {
 							newTables = {
 								...newTables,
@@ -114,8 +112,6 @@ export default function Creator(props) {
 		if (e) {
 			e.preventDefault();
 		}
-
-		console.log(id);
 
 		if (id) {
 			props.db.get(id).then((doc) => {

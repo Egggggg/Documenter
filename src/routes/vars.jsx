@@ -12,7 +12,7 @@ import Popover from "react-bootstrap/Popover";
 import Table from "react-bootstrap/Table";
 import ToggleButton from "react-bootstrap/ToggleButton";
 import ToggleButtonGroup from "react-bootstrap/ToggleButtonGroup";
-import { evaluateTable } from "../func";
+import { evaluateTable, evaluateVal } from "../func";
 
 export default function Vars(props) {
 	const [vars, setVars] = useState({});
@@ -25,7 +25,7 @@ export default function Vars(props) {
 	const [{ search }] = useState(useLocation());
 	const [isTable, setIsTable] = useState(false);
 	const [tableData, setTableData] = useState([
-		{ type: "literal", value: "", priority: "last" }
+		{ type: "literal", value: "", priority: "last", scope: "global" }
 	]);
 
 	useEffect(() => {
@@ -57,6 +57,10 @@ export default function Vars(props) {
 						[doc.name]: doc.value
 					};
 
+					if (typeof newVars[doc.scope][doc.name] !== "string") {
+						newVars[doc.scope][doc.name][0].scope = doc.scope;
+					}
+
 					if (!scopes.includes(doc.scope)) {
 						setScopes([...scopes, doc.scope]);
 					}
@@ -76,7 +80,9 @@ export default function Vars(props) {
 		if (isTable) {
 			setNewValue("");
 		} else {
-			setTableData([{ type: "literal", value: "", priority: "last" }]);
+			setTableData([
+				{ type: "literal", value: "", priority: "last", scope: "global" }
+			]);
 		}
 	}, [isTable]);
 
@@ -258,11 +264,11 @@ export default function Vars(props) {
 			}
 		});
 
-		console.log(tableData);
-
 		setNewName("");
 		setNewScope("");
-		setTableData([{ type: "literal", value: "" }]);
+		setTableData([
+			{ type: "literal", value: "", priority: "last", scope: "global" }
+		]);
 	};
 
 	const newNameChange = (e) => {
@@ -287,7 +293,8 @@ export default function Vars(props) {
 			setIsTable(true);
 			setNewName(name);
 			setNewScope(key === "global" ? "" : key);
-			setTableData(vars[key][name]);
+
+			setTableData([...vars[key][name]]);
 		}
 	};
 
@@ -341,70 +348,46 @@ export default function Vars(props) {
 		setTableData(copy);
 	};
 
-	const evalValue = (val, name, scope) => {
-		const path = val.split(".");
+	const evalValue = (val, scope, name) => {
+		let value = evaluateVal(val, vars, false, scope, name, []);
 
-		if (path.length === 1) {
-			if (scope === "global" && name === path[0]) {
-				val = `recursion error (${val})`;
-			} else if (typeof vars.global[path[0]] !== "string") {
-				if (vars.global && vars.global[path[0]]) {
-					val = `${val} (${
-						evaluateTable(vars.global[path[0]], vars, false, name, scope)[0]
-					})`;
-				} else {
-					val = `missing deps (${val})`;
-				}
-			} else {
-				if (vars.global && vars.global[path[0]]) {
-					val = `${val} (${vars.global[path[0]]})`;
-				} else {
-					val = `missing deps (${val})`;
-				}
-			}
-		} else if (path.length === 2) {
-			if (scope === path[0] && name === path[1]) {
-				val = `recursion error (${val})`;
-			} else if (typeof vars[path[0]][path[1]] !== "string") {
-				if (vars[path[0]] && vars[path[0]][path[1]]) {
-					val = `${val} (${
-						evaluateTable(vars[path[0]][path[1]], vars, false, name, scope)[0]
-					})`;
-				} else {
-					val = `missing deps (${val})`;
-				}
-			} else {
-				if (vars[path[0]] && vars[path[0]][path[1]]) {
-					val = `${val} (${vars[path[0]][path[1]]})`;
-				} else {
-					val = `missing deps (${val})`;
-				}
-			}
+		if (value === val) {
+			return [val, value];
+		} else {
+			return [`${val} (${value})`, value];
 		}
-
-		return val;
 	};
 
-	const listTable = (name, scope, table) => {
+	const listTable = (scope, name, table) => {
 		const comparisons = { eq: "==", lt: "<", gt: ">" };
-		let [output, outputIndex] = evaluateTable(table, vars, false, name, scope);
+		let [output, outputIndex] = evaluateTable(table, vars, false, scope, name);
 
-		if (table[outputIndex][0].type === "var") {
-			output = evalValue(output);
+		if (outputIndex === -1) {
+			if (table[0].type === "var") {
+				output = evalValue(output, name, scope);
+			} else {
+				output = [output, output];
+			}
+		} else {
+			if (table[outputIndex].type === "var") {
+				output = evalValue(output, name, scope);
+			} else {
+				output = [output, output];
+			}
 		}
 
 		return (
 			<>
-				<h3 onClick={selectVar("global", name)}>{name}</h3>
+				<h3 onClick={selectVar(scope, name)}>{name}</h3>
 				<details>
 					<summary>Table</summary>
 					<Table bordered hover size="sm">
 						<thead>
 							<tr>
-								<th>Argument 1</th>
-								<th>Comparison</th>
-								<th>Argument 2</th>
-								<th>Output</th>
+								<th className="w-25">Argument 1</th>
+								<th className="w-25">Comparison</th>
+								<th className="w-25">Argument 2</th>
+								<th className="w-25">Output</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -421,14 +404,14 @@ export default function Vars(props) {
 														outputIndex === -1 ? "bg-primary text-light" : ""
 													}
 												>
-													{row.value}
+													{evalValue(row.value, scope, name)[0]}
 												</td>
 											</tr>
 											<tr className="bg-primary text-light">
 												<td>OUTPUT</td>
 												<td>OUTPUT</td>
 												<td>OUTPUT</td>
-												<td>{output}</td>
+												<td>{output[1]}</td>
 											</tr>
 										</>
 									);
@@ -446,11 +429,11 @@ export default function Vars(props) {
 											let comparison = comparisons[condition.comparison];
 
 											if (condition.val1Type === "var") {
-												val1 = evalValue(val1, name, scope);
+												val1 = evalValue(val1, scope, name)[0];
 											}
 
 											if (condition.val2Type === "var") {
-												val2 = evalValue(val2, name, scope);
+												val2 = evalValue(val2, scope, name)[0];
 											}
 
 											return (
@@ -470,7 +453,7 @@ export default function Vars(props) {
 													outputIndex === index ? "bg-primary text-light" : ""
 												}
 											>
-												{output}
+												{evalValue(row[0].value)[0]}
 											</td>
 										</tr>
 									</>
@@ -869,7 +852,7 @@ export default function Vars(props) {
 								// table var
 								return (
 									<ListGroup.Item key={name}>
-										{listTable(name, "global", vars["global"][name])}
+										{listTable("global", name, vars["global"][name])}
 									</ListGroup.Item>
 								);
 							}
@@ -886,8 +869,6 @@ export default function Vars(props) {
 							<Card.Header>{key}</Card.Header>
 							<ListGroup>
 								{Object.keys(vars[key]).map((name) => {
-									console.log(vars[key][name]);
-
 									if (typeof vars[key][name] === "string") {
 										// basic var
 										return (
@@ -903,7 +884,7 @@ export default function Vars(props) {
 										// table var
 										return (
 											<ListGroup.Item key={name}>
-												{listTable(name, key, vars[key][name])}
+												{listTable(key, name, vars[key][name])}
 											</ListGroup.Item>
 										);
 									}
