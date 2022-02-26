@@ -9,6 +9,7 @@ import Container from "react-bootstrap/Container";
 import Dropdown from "react-bootstrap/Dropdown";
 import DropdownButton from "react-bootstrap/DropdownButton";
 import ListGroup from "react-bootstrap/ListGroup";
+import { evaluateTable } from "../func";
 
 Handlebars.registerHelper("gt", (arg1, arg2) => {
 	return parseFloat(arg1) > parseFloat(arg2);
@@ -55,6 +56,40 @@ export default function List(props) {
 						};
 					}
 				});
+
+				let newTables = {};
+
+				results.docs.forEach((doc) => {
+					if (typeof doc.value !== "string") {
+						console.log(doc.value);
+
+						if (doc.scope === "global") {
+							newTables = {
+								...newTables,
+								[doc.name]: evaluateTable(
+									doc.value,
+									newVars,
+									true,
+									doc.name,
+									doc.scope
+								)[0]
+							};
+						} else {
+							newTables[doc.scope] = {
+								...newTables[doc.scope],
+								[doc.name]: evaluateTable(
+									doc.value,
+									newVars,
+									true,
+									doc.name,
+									doc.scope
+								)[0]
+							};
+						}
+					}
+				});
+
+				newVars = { ...newVars, ...newTables };
 
 				setVars(newVars);
 			});

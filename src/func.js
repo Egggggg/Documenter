@@ -2,19 +2,27 @@ export function evaluateTable(table, vars, globalRoot, name, scope) {
 	// the first entry of a table is always the default value and conflictType entry
 	if (table[0].conflictType === "last") {
 		for (let row = table.length - 1; row > 0; row--) {
-			if (evaluateRow(row, table, vars, globalRoot, name, scope)) {
-				return [table[row][0].value, row];
+			try {
+				if (evaluateRow(row, table, vars, globalRoot, name, scope)) {
+					return [table[row][0].value, row];
+				}
+			} catch (err) {
+				return [err.message, null];
 			}
 		}
 	} else {
 		for (let row = 1; row < table.length; row++) {
-			if (evaluateRow(row, table, vars, globalRoot, name, scope)) {
-				return [table[row][0].value, row];
+			try {
+				if (evaluateRow(row, table, vars, globalRoot, name, scope)) {
+					return [table[row][0].value, row];
+				}
+			} catch (err) {
+				return [err.message, null];
 			}
 		}
 	}
 
-	return ["error", null];
+	return ["couldn't evaluate", null];
 }
 
 function evaluateRow(row, table, vars, globalRoot, name, scope) {
@@ -31,15 +39,22 @@ function evaluateRow(row, table, vars, globalRoot, name, scope) {
 		let { val1, val2 } = condition;
 
 		if (condition.val1Type === "var") {
-			val1 = evaluateVal(val1, vars, globalRoot, name, scope);
+			try {
+				val1 = evaluateVal(val1, vars, globalRoot, name, scope);
+			} catch (err) {
+				throw err;
+			}
 		}
 
 		if (condition.val2Type === "var") {
-			val2 = evaluateVal(val2, vars, globalRoot, name, scope);
+			try {
+				val2 = evaluateVal(val2, vars, globalRoot, name, scope);
+			} catch (err) {
+				throw err;
+			}
 		}
 
 		if (!comparisons[table[row][i].comparison](val1, val2)) {
-			console.log(val1, val2, table[row][i].comparison);
 			return false;
 		}
 
@@ -53,26 +68,26 @@ function evaluateVal(val, vars, globalRoot, name, scope) {
 	if (path.length === 1) {
 		if (globalRoot) {
 			if (!vars[path[0]]) {
-				return null;
+				throw Error("variable does not exist");
 			}
 
 			if (scope === "global" && name === path[0]) {
-				return null;
+				throw Error("circular dependency error");
 			}
 
 			val = vars[path[0]];
 
-			if (typeof val === "string") {
-				val = evaluateTable(vars[path[0]], vars, globalRoot, name, scope)[0];
+			if (typeof val !== "string") {
+				val = evaluateTable(val, vars, globalRoot, name, scope)[0];
 			}
 		} else {
 			if (scope === "global" && name === path[0]) {
-				return null;
+				throw Error("circular dependency error");
 			}
 
 			if (vars.global) {
 				if (!vars.global[path[0]]) {
-					return null;
+					throw ReferenceError("variable does not exist");
 				}
 
 				if (vars.global) {
@@ -88,18 +103,18 @@ function evaluateVal(val, vars, globalRoot, name, scope) {
 						)[0];
 					}
 				} else {
-					return null;
+					throw ReferenceError("scope does not exist");
 				}
 			}
 		}
 	} else if (path.length === 2) {
 		if (scope === path[0] && name === path[1]) {
-			return null;
+			throw Error("circular dependency error");
 		}
 
 		if (vars[path[0]]) {
 			if (!vars[path[0]][path[1]]) {
-				return null;
+				throw ReferenceError("variable does not exist");
 			}
 
 			val = vars[path[0]][path[1]];
@@ -114,7 +129,7 @@ function evaluateVal(val, vars, globalRoot, name, scope) {
 				)[0];
 			}
 		} else {
-			return null;
+			throw ReferenceError("scope does not exist");
 		}
 	}
 
