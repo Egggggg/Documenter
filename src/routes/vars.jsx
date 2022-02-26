@@ -356,7 +356,7 @@ export default function Vars(props) {
 				<h3 onClick={selectVar("global", name)}>{name}</h3>
 				<details>
 					<summary>Table</summary>
-					<Table striped bordered hover size="sm">
+					<Table bordered hover size="sm">
 						<thead>
 							<tr>
 								<th>Argument 1</th>
