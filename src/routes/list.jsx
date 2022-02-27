@@ -269,7 +269,7 @@ export default function List(props) {
 					document go to the <NavLink to="/create">create</NavLink> page
 				</h3>
 			)}
-			{items.map((item, index) => {
+			{items.map((item) => {
 				return (
 					<div key={item._id}>
 						<Card>
