@@ -293,7 +293,6 @@ export default function Vars(props) {
 			setIsTable(true);
 			setNewName(name);
 			setNewScope(key === "global" ? "" : key);
-
 			setTableData([...vars[key][name]]);
 		}
 	};
