@@ -41,6 +41,11 @@ export default function App() {
 									<Button>Guides</Button>
 								</LinkContainer>
 							</div>
+							<div as={Nav.Link} className="me-3">
+								<LinkContainer to="/docs">
+									<Button>Docs</Button>
+								</LinkContainer>
+							</div>
 						</Nav>
 					</Navbar.Collapse>
 				</Container>
