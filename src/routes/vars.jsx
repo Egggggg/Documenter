@@ -349,7 +349,7 @@ export default function Vars(props) {
 	};
 
 	const evalValue = (val, scope, name) => {
-		let value = evaluateVal(val, vars, false, scope, name, []);
+		let value = evaluateVal(val, vars, false, scope, name);
 
 		if (value === val) {
 			return [val, value];

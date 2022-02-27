@@ -5,7 +5,7 @@ const comparisons = {
 	gt: (arg1, arg2) => parseFloat(arg1) > parseFloat(arg2)
 };
 
-const depthMax = 100;
+const depthMax = 10;
 
 // chain keeps track of accessed tables and purpose
 // chain gets cleared when purpose changes
@@ -55,8 +55,6 @@ export function evaluateTable(table, vars, globalRoot, scope, name, depth) {
 					return [table[row][0].value, row];
 				}
 			} catch (err) {
-				console.log(err.message);
-
 				if (err.message === "circular dependency") {
 					return [err.message, null];
 				}

@@ -35,8 +35,7 @@ export default function SaveLoad(props) {
 		let docFolder;
 		let varFolder;
 
-		const vars = {};
-		const evalVars = {};
+		let vars = {};
 		let varFiles = {};
 
 		if (saveOptions.readable) {
@@ -53,7 +52,6 @@ export default function SaveLoad(props) {
 					if (saveOptions.eval) {
 						if (doc.scope === "global") {
 							vars[doc.name] = doc.value;
-							evaluateTable();
 						} else {
 							vars[doc.scope] = { ...vars[doc.scope], [doc.name]: doc.value };
 						}
@@ -97,14 +95,51 @@ export default function SaveLoad(props) {
 				return props.db.find({ selector: { type: "document" } });
 			})
 			.then((results) => {
-				let evaluatedVars = vars;
+				let evaluatedVars = { ...vars };
 
 				if (saveOptions.readable && saveOptions.eval) {
 					Object.keys(vars).forEach((key) => {
-						if (typeof evaluatedVars[key] === "string") {
+						const current = vars[key];
+
+						// basic variables
+						if (typeof current === "string") {
 							return;
 						}
+
+						// tables
+						if (current[0]) {
+							evaluatedVars[key] = evaluateTable(
+								current,
+								vars,
+								true,
+								"global",
+								key
+							)[0];
+
+							return;
+						}
+
+						// scopes
+						Object.keys(current).forEach((item) => {
+							const currentItem = current[item];
+
+							if (typeof currentItem === "string") {
+								return;
+							}
+
+							console.log(currentItem, vars, key, item);
+
+							evaluatedVars[key][item] = evaluateTable(
+								currentItem,
+								vars,
+								true,
+								key,
+								item
+							)[0];
+						});
 					});
+
+					vars = { ...vars, ...evaluatedVars };
 				}
 
 				results.docs.forEach((doc) => {
