@@ -682,13 +682,13 @@ export default function Vars(props) {
 							"value",
 							"type"
 						)}
-						<Button onClick={addRow}>Add Row</Button>
+						<Button onClick={addRow}>Add Output</Button>
 						{tableData.map((row, index) => {
 							if (index === 0) return null;
 							return (
 								<Card key={index}>
 									<Card.Header>
-										Row {index}
+										Output {index}
 										<Button
 											className="float-end"
 											onClick={() => {
@@ -699,7 +699,7 @@ export default function Vars(props) {
 												setTableData(copy);
 											}}
 										>
-											Delete Row
+											Delete Output
 										</Button>
 									</Card.Header>
 									<Button className="w-25" onClick={addCondition(index)}>
