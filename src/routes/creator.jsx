@@ -1,5 +1,5 @@
 import MDEditor from "@uiw/react-md-editor";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, Navigate } from "react-router-dom";
 import { NotificationManager } from "react-notifications";
 import Handlebars from "handlebars/dist/handlebars.min.js";
@@ -28,9 +28,6 @@ export default function Creator(props) {
 	const [guide, setGuide] = useState(null);
 
 	const [redirect, setRedirect] = useState(null);
-	const editorRef = useRef(
-		document.getElementsByClassName("w-md-editor-preview")
-	);
 
 	useEffect(() => {
 		props.db
