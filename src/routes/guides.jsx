@@ -18,7 +18,7 @@ export default function Guides() {
 					<ListGroup.Item action>Scoped Variables</ListGroup.Item>
 				</NavLink>
 				<NavLink to="/create?guide=h1" className="text-decoration-none">
-					<ListGroup.Item action>Helper Functions</ListGroup.Item>
+					<ListGroup.Item action>Conditionals</ListGroup.Item>
 				</NavLink>
 			</ListGroup>
 		</Container>
