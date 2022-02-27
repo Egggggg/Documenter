@@ -5,6 +5,7 @@ import Handlebars from "handlebars/dist/handlebars.min.js";
 import { NotificationManager } from "react-notifications";
 import { evaluateTable } from "../func";
 import Papa from "papaparse";
+import fm from "front-matter";
 
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -240,13 +241,67 @@ export default function SaveLoad(props) {
 			if (loadOptions.type !== "vars") {
 				NotificationManager.warning(
 					null,
-					"You can only load variables from .csv"
+					"You can only load variables from .csv files"
 				);
+
 				setShowModal(false);
 				return;
 			}
 
 			loadCSV(await file.text());
+		} else if (file.type === "text/plain") {
+			if (loadOptions.type !== "docs") {
+				NotificationManager.warning(
+					null,
+					"You can only load documents from .txt files"
+				);
+
+				setShowModal(false);
+				return;
+			}
+
+			const name = /(.*)\..*/.exec(file.name);
+
+			loadTXT(name ? name[1] : file.name, await file.text());
+		} else if (file.type === "text/markdown" || file.name.endsWith(".md")) {
+			if (loadOptions.type !== "docs") {
+				NotificationManager.warning(
+					null,
+					"You can only load documents from .md files"
+				);
+
+				setShowModal(false);
+				return;
+			}
+
+			const name = /(.*)\..*/.exec(file.name);
+
+			loadMD(name ? name[1] : file.name, await file.text());
+		} else if (
+			file.type === "application/zip" ||
+			file.type === "application/x-zip-compressed"
+		) {
+			JSZip.loadAsync(file).then((zip) => {
+				Object.keys(zip.files).forEach((name) => {
+					zip.files[name].async("string").then(async (data) => {
+						if (name.endsWith(".json")) {
+							await loadJSON(data);
+						} else if (name.endsWith(".txt")) {
+							name = name.split("\\").pop().split("/").pop();
+							const title = /(.*)\..*/.exec(name);
+
+							loadTXT(title ? title[1] : name, data);
+						} else if (name.endsWith(".md")) {
+							name = name.split("\\").pop().split("/").pop();
+							const title = /(.*)\..*/.exec(name);
+
+							loadMD(title ? title[1] : name, data);
+						}
+					});
+				});
+			});
+		} else {
+			console.log(file.type);
 		}
 
 		setShowModal(false);
@@ -452,6 +507,53 @@ export default function SaveLoad(props) {
 		});
 	};
 
+	const loadTXT = (name, text) => {
+		props.db.post({
+			name,
+			tags: [],
+			text: text.replace(/\r\n/g, "<br />").replace(/\n/g, "<br />"),
+			type: "document",
+			sortKey: "1",
+			scope: "global"
+		});
+	};
+
+	const loadMD = (name, text) => {
+		let frontmatter = fm(text);
+
+		text = frontmatter.body;
+		frontmatter = frontmatter.attributes;
+
+		if (frontmatter._id && loadOptions.addType === "replace") {
+			props.db
+				.get(frontmatter._id)
+				.then((doc) => {
+					props.db.put({
+						_id: doc._id,
+						_rev: doc._rev,
+						type: "document",
+						name,
+						text,
+						tags: frontmatter.tags || [],
+						scope: frontmatter.scope || "global",
+						sortKey: frontmatter.sortKey || "1"
+					});
+
+					return;
+				})
+				.catch(() => {});
+		}
+
+		props.db.post({
+			name,
+			text,
+			type: "document",
+			tags: frontmatter.tags || [],
+			scope: frontmatter.scope || "global",
+			sortKey: frontmatter.sortKey || "1"
+		});
+	};
+
 	const checkboxChange = (e) => {
 		setSaveOptions({
 			...saveOptions,
@@ -594,7 +696,7 @@ export default function SaveLoad(props) {
 				)}
 				<Form.Group className="mb-3" controlId="formBasicLoadFile">
 					<Form.Label>Load manifest.json</Form.Label>
-					<Form.Control type="file" accept=".json, .csv" />
+					<Form.Control type="file" accept=".json, .csv, .txt, .md, .zip" />
 					<Button type="submit">Load</Button>
 				</Form.Group>
 			</Form>
