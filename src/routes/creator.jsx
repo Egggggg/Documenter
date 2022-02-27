@@ -323,7 +323,7 @@ export default function Creator(props) {
 					placement="top"
 					overlay={popover(
 						"Helper Functions",
-						"You can check equality of values with our three custom helpers: <code>eq</code> (equals), <code>lt</code> (less than),  and <code>gt</code> (greater than). They each take two arguments, and check the first one against the second one. You can use variables in these helpers. You use them like this: <code>{{#eq&nbsp;3&nbsp;varName}}&nbsp;{{/eq}}</code>",
+						"You can check equality of values with our three custom helpers: <code>eq</code> (equals), <code>lt</code> (less than),  and <code>gt</code> (greater than). They each take two arguments, and check the first one against the second one. You can use variables in these helpers. You use them like this: <code>{{eq&nbsp;3&nbsp;varName}}</code>",
 						null,
 						"h2"
 					)}
