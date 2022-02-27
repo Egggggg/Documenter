@@ -79,8 +79,8 @@ export default function List(props) {
 									doc.value,
 									newVars,
 									true,
-									doc.name,
-									doc.scope
+									doc.scope,
+									doc.name
 								)[0]
 							};
 						}

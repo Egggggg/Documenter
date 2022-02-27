@@ -351,7 +351,7 @@ export default function Vars(props) {
 		let value = evaluateVal(val, vars, false, scope, name);
 
 		if (value === val) {
-			return [val, value];
+			return [val, val];
 		} else {
 			return [`${val} (${value})`, value];
 		}
@@ -363,13 +363,13 @@ export default function Vars(props) {
 
 		if (outputIndex === -1) {
 			if (table[0].type === "var") {
-				output = evalValue(output, name, scope);
+				output = [table[0].value, output];
 			} else {
 				output = [output, output];
 			}
 		} else {
 			if (table[outputIndex].type === "var") {
-				output = evalValue(output, name, scope);
+				output = [table[outputIndex].value, output];
 			} else {
 				output = [output, output];
 			}

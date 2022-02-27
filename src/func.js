@@ -10,6 +10,8 @@ const depthMax = 10;
 // chain keeps track of accessed tables and purpose
 // chain gets cleared when purpose changes
 export function evaluateTable(table, vars, globalRoot, scope, name, depth) {
+	console.log(scope, name);
+
 	if (!depth) {
 		depth = 0;
 	}
@@ -142,12 +144,35 @@ function evaluateRow(row, table, vars, globalRoot, scope, name, depth) {
 }
 
 export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
-	const path = val.split(".");
+	const up = val.startsWith("../");
+
+	if (up) {
+		val = val.substring(3);
+	}
+
+	let path = val.split(".");
+
+	console.log(scope, name);
+
+	if (path.length === 1) {
+		if (up) {
+			if (!globalRoot) {
+				path.push(path[0]);
+				path[0] = "global";
+			}
+		} else if (!(globalRoot && scope === "global")) {
+			path.push(path[0]);
+			path[0] = scope;
+		}
+	}
+
+	console.log(path);
+	console.log(vars);
 
 	if (path.length === 1) {
 		if (globalRoot) {
 			if (!vars[path[0]]) {
-				throw Error("variable does not exist");
+				return "variable does not exist";
 			}
 
 			if (scope === "global" && name === path[0]) {
@@ -182,7 +207,7 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 					)[0];
 				}
 			} else {
-				throw ReferenceError("scope does not exist");
+				return "scope does not exist";
 			}
 		}
 	} else if (path.length === 2) {
@@ -192,7 +217,7 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 
 		if (vars[path[0]]) {
 			if (!vars[path[0]][path[1]]) {
-				throw ReferenceError("variable does not exist");
+				return "variable does not exist";
 			}
 
 			val = vars[path[0]][path[1]];
@@ -201,7 +226,8 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 				val = evaluateTable(val, vars, globalRoot, path[0], path[1], depth)[0];
 			}
 		} else {
-			throw ReferenceError("scope does not exist");
+			console.log(vars, path, scope, name);
+			return "scope does not exist";
 		}
 	}
 
