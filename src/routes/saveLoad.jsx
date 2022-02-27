@@ -4,6 +4,7 @@ import { useState } from "react";
 import Handlebars from "handlebars/dist/handlebars.min.js";
 import { NotificationManager } from "react-notifications";
 import { evaluateTable } from "../func";
+import Papa from "papaparse";
 
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -35,8 +36,7 @@ export default function SaveLoad(props) {
 		let docFolder;
 		let varFolder;
 
-		const vars = {};
-		const evalVars = {};
+		let vars = {};
 		let varFiles = {};
 
 		if (saveOptions.readable) {
@@ -53,7 +53,6 @@ export default function SaveLoad(props) {
 					if (saveOptions.eval) {
 						if (doc.scope === "global") {
 							vars[doc.name] = doc.value;
-							evaluateTable();
 						} else {
 							vars[doc.scope] = { ...vars[doc.scope], [doc.name]: doc.value };
 						}
@@ -97,14 +96,51 @@ export default function SaveLoad(props) {
 				return props.db.find({ selector: { type: "document" } });
 			})
 			.then((results) => {
-				let evaluatedVars = vars;
+				let evaluatedVars = { ...vars };
 
 				if (saveOptions.readable && saveOptions.eval) {
 					Object.keys(vars).forEach((key) => {
-						if (typeof evaluatedVars[key] === "string") {
+						const current = vars[key];
+
+						// basic variables
+						if (typeof current === "string") {
 							return;
 						}
+
+						// tables
+						if (current[0]) {
+							evaluatedVars[key] = evaluateTable(
+								current,
+								vars,
+								true,
+								"global",
+								key
+							)[0];
+
+							return;
+						}
+
+						// scopes
+						Object.keys(current).forEach((item) => {
+							const currentItem = current[item];
+
+							if (typeof currentItem === "string") {
+								return;
+							}
+
+							console.log(currentItem, vars, key, item);
+
+							evaluatedVars[key][item] = evaluateTable(
+								currentItem,
+								vars,
+								true,
+								key,
+								item
+							)[0];
+						});
 					});
+
+					vars = { ...vars, ...evaluatedVars };
 				}
 
 				results.docs.forEach((doc) => {
@@ -156,25 +192,17 @@ export default function SaveLoad(props) {
 	const load = async (e) => {
 		e.preventDefault();
 
-		let text;
-
 		if (
 			!e.target.elements.formBasicLoadFile.files[0] &&
 			loadOptions.addType !== "replaceAll"
 		) {
 			NotificationManager.warning(null, "No file chosen");
 			return;
-		} else if (e.target.elements.formBasicLoadFile.files[0]) {
-			text = await e.target.elements.formBasicLoadFile.files[0].text();
 		}
 
 		setShowModal(true);
 
-		const varString = [0, 1, 2, 3, 4]
-			.map(() => {
-				return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 25)];
-			})
-			.join("");
+		const file = e.target.elements.formBasicLoadFile.files[0];
 
 		if (loadOptions.addType === "replaceAll") {
 			let results = [];
@@ -200,17 +228,122 @@ export default function SaveLoad(props) {
 					props.db.remove(doc);
 				}
 			}
+		}
 
-			if (!text) {
+		if (!file) {
+			setShowModal(false);
+		}
+
+		if (file.type === "application/json") {
+			await loadJSON(await file.text());
+		} else if (file.type === "text/csv") {
+			if (loadOptions.type !== "vars") {
+				NotificationManager.warning(
+					null,
+					"You can only load variables from .csv"
+				);
 				setShowModal(false);
 				return;
 			}
+
+			loadCSV(await file.text());
 		}
+
+		setShowModal(false);
+	};
+
+	const appendVars = async (name, value, scope) => {
+		const varString = [0, 1, 2, 3, 4]
+			.map(() => {
+				return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 25)];
+			})
+			.join("");
+
+		if (scope === "global") {
+			const results = await props.db.find({
+				selector: { scope: name },
+				limit: 1 // make sure not to have a variable name conflict with a scope name
+			});
+
+			if (results.docs.length > 0) {
+				name = `${name}-${varString}`;
+			}
+		}
+
+		let results = await props.db.find({
+			selector: { scope, name },
+			limit: 1
+		});
+
+		if (results.docs.length > 0) {
+			name = `${name}-${varString}`;
+		}
+
+		results = await props.db.find({
+			selector: { scope: "global", name: scope },
+			limit: 1
+		});
+
+		if (results.docs.length > 0) {
+			scope = `${scope}-${varString}`;
+		}
+
+		props.db.post({
+			name,
+			value,
+			scope,
+			type: "var"
+		});
+	};
+
+	const overwriteVars = async (name, value, scope) => {
+		if (scope === "global") {
+			const results = await props.db.find({
+				selector: { scope: name }
+			});
+
+			if (results.docs.length > 0) {
+				results.docs.forEach((result) => {
+					props.db.remove(result);
+				});
+			}
+		}
+
+		let results = await props.db.find({
+			selector: { scope, name },
+			limit: 1
+		});
+
+		if (results.docs.length > 0) {
+			results.docs.forEach((result) => {
+				props.db.remove(result);
+			});
+		}
+
+		results = await props.db.find({
+			selector: { scope: "global", name: scope }
+		});
+
+		if (results.docs.length > 0) {
+			results.docs.forEach((result) => {
+				props.db.remove(result);
+			});
+		}
+
+		props.db.post({
+			name,
+			value,
+			scope,
+			type: "var"
+		});
+	};
+
+	const loadJSON = async (text) => {
+		setShowModal(true);
 
 		const data = JSON.parse(text);
 
 		for (const key of Object.keys(data)) {
-			await new Promise((r) => setTimeout(r, 1));
 			const doc = data[key];
 
 			if (loadOptions.addType === "append") {
@@ -224,41 +357,7 @@ export default function SaveLoad(props) {
 						scope: doc.scope || "global"
 					});
 				} else if (doc.type === "var" && loadOptions.type !== "docs") {
-					let name = doc.name;
-					let scope = doc.scope;
-
-					if (doc.scope === "global") {
-						const results = await props.db.find({
-							selector: { scope: name }
-						});
-
-						if (results.docs.length > 0) {
-							name = `${name}-${varString}`;
-						}
-					}
-
-					let results = await props.db.find({
-						selector: { scope: scope, name: name }
-					});
-
-					if (results.docs.length > 0) {
-						name = `${name}-${varString}`;
-					}
-
-					results = await props.db.find({
-						selector: { scope: "global", name: scope }
-					});
-
-					if (results.docs.length > 0) {
-						scope = `${scope}-${varString}`;
-					}
-
-					props.db.post({
-						name: name,
-						value: doc.value,
-						scope: scope,
-						type: "var"
-					});
+					await appendVars(doc.name, doc.value, doc.scope);
 				}
 			} else if (loadOptions.addType === "overwrite") {
 				if (doc.type === "document" && loadOptions.type !== "vars") {
@@ -287,44 +386,7 @@ export default function SaveLoad(props) {
 						});
 					}
 				} else if (doc.type === "var" && loadOptions.type !== "docs") {
-					if (doc.scope === "global") {
-						const results = await props.db.find({
-							selector: { scope: doc.name }
-						});
-
-						if (results.docs.length > 0) {
-							results.docs.forEach((result) => {
-								props.db.remove(result);
-							});
-						}
-					}
-
-					let results = await props.db.find({
-						selector: { scope: doc.scope, name: doc.name }
-					});
-
-					if (results.docs.length > 0) {
-						results.docs.forEach((result) => {
-							props.db.remove(result);
-						});
-					}
-
-					results = await props.db.find({
-						selector: { scope: "global", name: doc.scope }
-					});
-
-					if (results.docs.length > 0) {
-						results.docs.forEach((result) => {
-							props.db.remove(result);
-						});
-					}
-
-					props.db.post({
-						name: doc.name,
-						value: doc.value,
-						scope: doc.scope,
-						type: "var"
-					});
+					await overwriteVars(doc.name, doc.value, doc.scope);
 				}
 			} else if (loadOptions.addType === "replaceAll") {
 				if (doc.type === "document" && loadOptions.type !== "vars") {
@@ -349,6 +411,45 @@ export default function SaveLoad(props) {
 
 		setShowModal(false);
 		NotificationManager.success(null, "Loading complete");
+	};
+
+	const loadCSV = (text) => {
+		const { data } = Papa.parse(text);
+
+		if (!data[0].includes("Name") || !data[0].includes("Value")) {
+			NotificationManager.warning(null, "Name and Value columns are required");
+			return;
+		}
+
+		const nameIndex = data[0].indexOf("Name");
+		const valueIndex = data[0].indexOf("Value");
+		let scopeIndex;
+
+		if (data[0].includes("Scope")) {
+			scopeIndex = data[0].indexOf("Scope");
+		}
+
+		data.forEach(async (row, i) => {
+			if (i === 0) {
+				return;
+			}
+
+			const name = row[nameIndex];
+			const value = row[valueIndex];
+			const scope = row[scopeIndex] || "global";
+
+			if (!name || !value) {
+				return;
+			}
+
+			if (loadOptions.addType === "append") {
+				await appendVars(name, value, scope);
+			} else if (loadOptions.addType === "overwrite") {
+				await overwriteVars(name, value, scope);
+			} else if (loadOptions.addType === "replaceAll") {
+				props.db.post({ name, value, scope, type: "var" });
+			}
+		});
 	};
 
 	const checkboxChange = (e) => {
@@ -493,7 +594,7 @@ export default function SaveLoad(props) {
 				)}
 				<Form.Group className="mb-3" controlId="formBasicLoadFile">
 					<Form.Label>Load manifest.json</Form.Label>
-					<Form.Control type="file" accept=".json" />
+					<Form.Control type="file" accept=".json, .csv" />
 					<Button type="submit">Load</Button>
 				</Form.Group>
 			</Form>
