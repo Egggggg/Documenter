@@ -108,7 +108,7 @@ export default function List(props) {
 
 		props.db
 			.find({
-				selector: selector,
+				selector,
 				sort: [{ sortKey: sortOrderKeys[sortOrder] }]
 			})
 			.then((results) => {
@@ -134,7 +134,7 @@ export default function List(props) {
 				limit: perPage,
 				skip: 5 * page,
 				include_docs: true,
-				selector: selector,
+				selector,
 				sort: [{ sortKey: sortOrderKeys[sortOrder] }]
 			})
 			.then((results) => {

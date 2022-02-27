@@ -119,11 +119,11 @@ export default function Creator(props) {
 					_id: id,
 					_rev: doc._rev,
 					name: nameValue,
-					tags: tags,
+					tags,
 					text: mdValue,
 					type: "document",
 					sortKey: keyValue,
-					scope: scope
+					scope
 				});
 			});
 		} else {
@@ -131,11 +131,11 @@ export default function Creator(props) {
 			props.db.post({
 				_id: newId,
 				name: nameValue,
-				tags: tags,
+				tags,
 				text: mdValue,
 				type: "document",
 				sortKey: keyValue,
-				scope: scope
+				scope
 			});
 
 			if (!leave) {

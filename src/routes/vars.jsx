@@ -132,29 +132,29 @@ export default function Vars(props) {
 		if (exists) {
 			if (!newValue) {
 				props.db
-					.find({ selector: { type: "var", scope: scope, name: name } })
+					.find({ selector: { type: "var", scope, name } })
 					.then((results) => {
 						props.db.remove(results.docs[0]);
 					});
 			} else {
 				props.db
-					.find({ selector: { type: "var", scope: scope, name: name } })
+					.find({ selector: { type: "var", scope, name } })
 					.then((results) => {
 						props.db.put({
 							_id: results.docs[0]._id,
 							_rev: results.docs[0]._rev,
-							name: name,
+							name,
 							value: newValue,
-							scope: scope,
+							scope,
 							type: "var"
 						});
 					});
 			}
 		} else if (newValue !== "") {
 			props.db.post({
-				name: name,
+				name,
 				value: newValue,
-				scope: scope,
+				scope,
 				type: "var"
 			});
 		}
@@ -236,22 +236,22 @@ export default function Vars(props) {
 
 		if (exists) {
 			props.db
-				.find({ selector: { type: "var", scope: scope, name: name } })
+				.find({ selector: { type: "var", scope, name } })
 				.then((results) => {
 					props.db.put({
 						_id: results.docs[0]._id,
 						_rev: results.docs[0]._rev,
-						name: name,
+						name,
 						value: tableData,
-						scope: scope,
+						scope,
 						type: "var"
 					});
 				});
 		} else {
 			props.db.post({
-				name: name,
+				name,
 				value: tableData,
-				scope: scope,
+				scope,
 				type: "var"
 			});
 		}
