@@ -1,5 +1,5 @@
 import MDEditor from "@uiw/react-md-editor";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, Navigate } from "react-router-dom";
 import { NotificationManager } from "react-notifications";
 import Handlebars from "handlebars/dist/handlebars.min.js";
@@ -28,6 +28,10 @@ export default function Creator(props) {
 	const [guide, setGuide] = useState(null);
 
 	const [redirect, setRedirect] = useState(null);
+	const editorRef = useRef(
+		document.getElementsByClassName("w-md-editor-preview")
+	);
+
 	useEffect(() => {
 		props.db
 			.find({
@@ -52,8 +56,6 @@ export default function Creator(props) {
 
 				results.docs.forEach((doc) => {
 					if (typeof doc.value !== "string") {
-						console.log(doc.value);
-
 						if (doc.scope === "global") {
 							newTables = {
 								...newTables,
@@ -203,7 +205,7 @@ export default function Creator(props) {
 		);
 	};
 
-	const compile = (item) => {
+	const compile = () => {
 		try {
 			const exists = Object.keys(vars).includes(scope);
 
@@ -213,6 +215,10 @@ export default function Creator(props) {
 		} catch (err) {
 			return err.message.replace(/\n/g, "<br />");
 		}
+	};
+
+	const mdChange = (val) => {
+		setMdValue(val);
 	};
 
 	return (
@@ -343,12 +349,16 @@ export default function Creator(props) {
 				>
 					<div></div>
 				</OverlayTrigger>
-				<MDEditor
-					onKeyDown={mdEditorDown}
-					value={mdValue}
-					onChange={setMdValue}
-					previewOptions={{}}
-				/>
+				<Card className="d-flex flex-row">
+					<MDEditor
+						onKeyDown={mdEditorDown}
+						value={mdValue}
+						onChange={mdChange}
+						preview="editor"
+						className="w-50"
+					/>
+					<MDEditor.Markdown source={compile(mdValue)} className="m-3 w-50" />
+				</Card>
 				<Card>
 					<OverlayTrigger
 						placement="top"
@@ -397,29 +407,6 @@ export default function Creator(props) {
 					<Button type="submit">Create</Button>
 				</OverlayTrigger>
 				<span>(or Ctrl+S in the text editor)</span>
-				<Card className="mt-3">
-					<Card.Header>
-						<h1 className="float-start">{nameValue}</h1>
-						<Button className="float-end">Delete</Button>
-						<Button className="float-end">Edit</Button>
-					</Card.Header>
-					<Card.Body>
-						Sort Key: {keyValue}
-						<h3>Content</h3>
-						<MDEditor.Markdown source={compile(mdValue)} />
-						<hr />
-						{tags.length > 0 && (
-							<div id="tags">
-								<h3>Tags</h3>
-								<ListGroup>
-									{tags.map((tag) => (
-										<ListGroup.Item key={tag}>{tag}</ListGroup.Item>
-									))}
-								</ListGroup>
-							</div>
-						)}
-					</Card.Body>
-				</Card>
 			</Form>
 		</Container>
 	);
