@@ -15,6 +15,21 @@ import Guides from "./routes/guides";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "react-notifications/lib/notifications.css";
 
+Handlebars.registerHelper("eq", function () {
+	let last = arguments[0];
+
+	for (let i = 0; i < arguments.length - 1; i++) {
+		// eslint-disable-next-line eqeqeq
+		if (arguments[i] != last) {
+			return false;
+		}
+
+		last = arguments[i];
+	}
+
+	return true;
+});
+
 Handlebars.registerHelper("gt", (arg1, arg2) => {
 	return parseFloat(arg1) > parseFloat(arg2);
 });
@@ -23,24 +38,25 @@ Handlebars.registerHelper("lt", (arg1, arg2) => {
 	return parseFloat(arg1) < parseFloat(arg2);
 });
 
-Handlebars.registerHelper("eq", (arg1, arg2) => {
-	// eslint-disable-next-line eqeqeq
-	return arg1 == arg2;
-});
+Handlebars.registerHelper("add", function () {
+	let sum = 0;
 
-Handlebars.registerHelper("add", (arg1, arg2) => {
-	arg1 = parseFloat(arg1);
-	arg2 = parseFloat(arg2);
+	console.log(arguments);
 
-	if (Number.isInteger(arg1)) {
-		arg1 = Math.floor(arg1);
+	// subtract 1 to remove the lookup property from being a helper
+	for (let i = 0; i < arguments.length - 1; i++) {
+		let argNum = parseFloat(arguments[i]);
+
+		if (Number.isInteger(argNum)) {
+			argNum = Math.floor(argNum);
+		}
+
+		console.log(argNum);
+		sum += argNum;
+		console.log(sum);
 	}
 
-	if (Number.isInteger(arg2)) {
-		arg2 = Math.floor(arg2);
-	}
-
-	return arg1 + arg2;
+	return sum;
 });
 
 Handlebars.registerHelper("sub", (arg1, arg2) => {
@@ -58,19 +74,21 @@ Handlebars.registerHelper("sub", (arg1, arg2) => {
 	return arg1 - arg2;
 });
 
-Handlebars.registerHelper("mul", (arg1, arg2) => {
-	arg1 = parseFloat(arg1);
-	arg2 = parseFloat(arg2);
+Handlebars.registerHelper("mul", function () {
+	let sum = 1;
 
-	if (Number.isInteger(arg1)) {
-		arg1 = Math.floor(arg1);
+	// subtract 1 to remove the lookup property from being a helper
+	for (let i = 0; i < arguments.length - 1; i++) {
+		let argNum = parseFloat(arguments[i]);
+
+		if (Number.isInteger(argNum)) {
+			argNum = Math.floor(argNum);
+		}
+
+		sum *= argNum;
 	}
 
-	if (Number.isInteger(arg2)) {
-		arg2 = Math.floor(arg2);
-	}
-
-	return arg1 * arg2;
+	return sum;
 });
 
 Handlebars.registerHelper("div", (arg1, arg2) => {
