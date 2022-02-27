@@ -403,7 +403,9 @@ export default function Vars(props) {
 														outputIndex === -1 ? "bg-primary text-light" : ""
 													}
 												>
-													{evalValue(row.value, scope, name)[0]}
+													{row.type === "var"
+														? evalValue(row.value, scope, name)[0]
+														: row.value}
 												</td>
 											</tr>
 											<tr className="bg-primary text-light">
@@ -415,6 +417,8 @@ export default function Vars(props) {
 										</>
 									);
 								}
+
+								console.log(row);
 
 								return (
 									<>
@@ -452,7 +456,9 @@ export default function Vars(props) {
 													outputIndex === index ? "bg-primary text-light" : ""
 												}
 											>
-												{evalValue(row[0].value)[0]}
+												{row[0].type === "var"
+													? evalValue(row[0].value, scope, name)[0]
+													: row[0].value}
 											</td>
 										</tr>
 									</>

@@ -608,7 +608,7 @@ export default function SaveLoad(props) {
 					/>
 				</Form.Group>
 			</Form>
-			<Button onClick={save}>Save As...</Button> <hr />
+			<Button onClick={save}>Save</Button> <hr />
 			<Form onSubmit={load}>
 				<Form.Label>Load Options</Form.Label>
 				<br />

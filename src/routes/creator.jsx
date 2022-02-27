@@ -52,6 +52,8 @@ export default function Creator(props) {
 				let newTables = {};
 
 				results.docs.forEach((doc) => {
+					console.log(doc);
+
 					if (typeof doc.value !== "string") {
 						if (doc.scope === "global") {
 							newTables = {

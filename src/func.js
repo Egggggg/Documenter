@@ -25,85 +25,11 @@ export function evaluateTable(table, vars, globalRoot, scope, name, depth) {
 	// the first entry of a table is always the default value and priority entry
 	if (table[0].priority === "last") {
 		for (let row = table.length - 1; row > 0; row--) {
-			try {
-				if (evaluateRow(row, table, vars, globalRoot, scope, name, depth)) {
-					if (table[row][0].type === "var") {
-						if (typeof table[row][0].value === "string") {
-							const val = getVar(table[row][0].value, vars, globalRoot);
-
-							if (typeof val === "string") {
-								return [val, row];
-							}
-
-							return [
-								evaluateVal(val[0].value, vars, globalRoot, scope, name, depth),
-								row
-							];
-						}
-
-						return [
-							evaluateVal(
-								table[row][0].value,
-								vars,
-								globalRoot,
-								scope,
-								name,
-								depth
-							),
-							row
-						];
-					}
-
-					return [table[row][0].value, row];
-				}
-			} catch (err) {
-				if (err.message === "circular dependency") {
-					return [err.message, null];
-				}
-
-				throw err;
-			}
+			return evalIteration(row, table, vars, globalRoot, scope, name, depth);
 		}
 	} else {
 		for (let row = 1; row < table.length; row++) {
-			try {
-				if (evaluateRow(row, table, vars, globalRoot, scope, name, depth)) {
-					if (table[row][0].type === "var") {
-						if (typeof table[row][0].value === "string") {
-							const val = getVar(table[row][0].value, vars, globalRoot);
-
-							if (typeof val === "string") {
-								return [val, row];
-							}
-
-							return [
-								evaluateVal(val[0].value, vars, globalRoot, scope, name, depth),
-								row
-							];
-						}
-
-						return [
-							evaluateVal(
-								table[row][0].value,
-								vars,
-								globalRoot,
-								scope,
-								name,
-								depth
-							),
-							row
-						];
-					}
-
-					return [table[row][0].value, row];
-				}
-			} catch (err) {
-				if (err.message === "circular dependency") {
-					return [err.message, null];
-				}
-
-				throw err;
-			}
+			return evalIteration(row, table, vars, globalRoot, scope, name, depth);
 		}
 	}
 
@@ -111,6 +37,68 @@ export function evaluateTable(table, vars, globalRoot, scope, name, depth) {
 		evaluateVal(table[0].value, vars, globalRoot, scope, name, depth),
 		-1
 	];
+}
+
+function evalIteration(row, table, vars, globalRoot, scope, name, depth) {
+	try {
+		if (evaluateRow(row, table, vars, globalRoot, scope, name, depth)) {
+			if (table[row][0].type === "var") {
+				if (typeof table[row][0].value === "string") {
+					let val = table[row][0].value;
+					const up = val.startsWith("../");
+
+					if (up) {
+						val = val.substring(3);
+					}
+
+					let path = val.split(".");
+
+					if (path.length === 1) {
+						if (up) {
+							if (!globalRoot) {
+								path.push(path[0]);
+								path[0] = "global";
+							}
+						} else if (!(globalRoot && scope === "global")) {
+							path.push(path[0]);
+							path[0] = scope;
+						}
+					}
+
+					val = getVar(path, vars, globalRoot);
+
+					if (typeof val === "string") {
+						return [val, row];
+					}
+
+					return [
+						evaluateVal(val[0].value, vars, globalRoot, scope, name, depth),
+						row
+					];
+				}
+
+				return [
+					evaluateVal(
+						table[row][0].value,
+						vars,
+						globalRoot,
+						scope,
+						name,
+						depth
+					),
+					row
+				];
+			}
+
+			return [table[row][0].value, row];
+		}
+	} catch (err) {
+		if (err.message === "circular dependency") {
+			return [err.message, null];
+		}
+
+		throw err;
+	}
 }
 
 function evaluateRow(row, table, vars, globalRoot, scope, name, depth) {
@@ -234,17 +222,16 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 	return val;
 }
 
-function getVar(name, vars, globalRoot) {
-	let path = name.split(".");
-
-	if (path.length === 1) {
-		path.push(path[0]);
-		path[0] = "global";
-	}
+function getVar(path, vars, globalRoot) {
+	console.log(path, vars);
 
 	if (path[0] === "global" && globalRoot) {
-		return path[0];
+		return path;
 	} else {
-		return vars[path[0]][path[1]];
+		if (vars[path[0]]) {
+			return vars[path[0]][path[1]];
+		}
+
+		return null;
 	}
 }
