@@ -139,8 +139,8 @@ export default function Docs() {
 				<Card className="mb-3">
 					<Card.Header>Default Expressions</Card.Header>
 					<Card.Body>
-						All of the default HandlebarsJS expressions are left fully intact,
-						and can be used normally. As usual, variables can be used in
+						All of the default Handlebars expressions are left fully intact, and
+						can be used normally. As usual, variables can be used in
 						expressions.
 					</Card.Body>
 				</Card>

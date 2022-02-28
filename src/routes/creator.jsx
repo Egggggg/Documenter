@@ -30,6 +30,12 @@ export default function Creator(props) {
 	const [redirect, setRedirect] = useState(null);
 
 	useEffect(() => {
+		const params = new URLSearchParams(search);
+
+		if (params.get("guide")) {
+			return;
+		}
+
 		props.db
 			.find({
 				include_docs: true,
@@ -85,7 +91,7 @@ export default function Creator(props) {
 
 				setVars(newVars);
 			});
-	}, [props.db]);
+	}, [props.db, search]);
 
 	useEffect(() => {
 		const params = new URLSearchParams(search);
@@ -106,8 +112,40 @@ export default function Creator(props) {
 	}, [props.db, search]);
 
 	useEffect(() => {
-		if (guide && guide.startsWith("/vars")) {
-			setRedirect(guide);
+		if (guide) {
+			if (guide.startsWith("/vars")) {
+				setRedirect(guide);
+			} else if (guide === "c1") {
+				setTags(["example tag", "another example tag"]);
+			} else if (guide === "v5") {
+				setVars({ example: "6", example2: "12" });
+				setMdValue("{{example}}<br />\n{{example2}}");
+			} else if (guide === "s2") {
+				setVars({
+					example: "6",
+					example2: "12",
+					scope1: { example: "24", example2: "36", example3: "72" }
+				});
+
+				setScope("scope1");
+				setMdValue(
+					"{{example}}<br />\n{{example2}}<br />\n{{example3}}<br />\n{{../example}}<br />\n{{../example2}}"
+				);
+			} else if (guide === "h1") {
+				setVars({
+					example: "6",
+					example2: "12",
+					scope1: { example: "24", example2: "36", example3: "72" }
+				});
+
+				setMdValue(
+					`{{eq example 6}}<br />
+{{lt example example2}}<br />
+{{gt example example2}}<br />
+{{#if (eq example 6)}}This will show up{{/if}}<br />
+{{#if (eq example 7)}}This won't show up{{/if}}`
+				);
+			}
 		}
 	}, [guide]);
 
@@ -263,7 +301,7 @@ export default function Creator(props) {
 					</Form.Group>
 				</OverlayTrigger>
 				<OverlayTrigger
-					placement="bottom"
+					placement="top"
 					overlay={popover(
 						"Scope",
 						"Without setting scope, you will need to access the scope of a scoped variable (meaning the scope is not the default of 'global') before you can use it, like this: <code>{{scope.name}}</code>. With a scope, you access variables from the same scope with just their name. If you enter a scope, you can still access global variables or variables from other scopes by prepending them with <code>../</code>, like this <code>{{../otherScope.name}}</code> or <code>{{../globalVar}}</code>",
@@ -351,7 +389,7 @@ export default function Creator(props) {
 						onKeyDown={mdEditorDown}
 						value={mdValue}
 						onChange={mdChange}
-						preview="editor"
+						preview="edit"
 						className="w-50"
 					/>
 					<MDEditor.Markdown source={compile(mdValue)} className="m-3 w-50" />

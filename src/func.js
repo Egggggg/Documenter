@@ -23,7 +23,7 @@ export function evaluateTable(table, vars, globalRoot, scope, name, depth) {
 	// the first entry of a table is always the default value and priority entry
 	if (table[0].priority === "last") {
 		for (let row = table.length - 1; row > 0; row--) {
-			const iteration = evalIteration(
+			const iteration = evaluateIter(
 				row,
 				table,
 				vars,
@@ -39,7 +39,7 @@ export function evaluateTable(table, vars, globalRoot, scope, name, depth) {
 		}
 	} else {
 		for (let row = 1; row < table.length; row++) {
-			const iteration = evalIteration(
+			const iteration = evaluateIter(
 				row,
 				table,
 				vars,
@@ -55,13 +55,17 @@ export function evaluateTable(table, vars, globalRoot, scope, name, depth) {
 		}
 	}
 
-	return [
-		evaluateVal(table[0].value, vars, globalRoot, scope, name, depth),
-		-1
-	];
+	if (typeof table[0].value === "string") {
+		return [table[0].value, -1];
+	} else {
+		return [
+			evaluateVal(table[0].value, vars, globalRoot, scope, name, depth),
+			-1
+		];
+	}
 }
 
-function evalIteration(row, table, vars, globalRoot, scope, name, depth) {
+function evaluateIter(row, table, vars, globalRoot, scope, name, depth) {
 	try {
 		if (evaluateRow(row, table, vars, globalRoot, scope, name, depth)) {
 			if (table[row][0].type === "var") {
@@ -91,6 +95,8 @@ function evalIteration(row, table, vars, globalRoot, scope, name, depth) {
 
 					if (typeof val === "string") {
 						return [val, row];
+					} else if (!val) {
+						return [null, null];
 					}
 
 					return [
@@ -148,9 +154,9 @@ function evaluateRow(row, table, vars, globalRoot, scope, name, depth) {
 		if (!comparisons[table[row][i].comparison](val1, val2)) {
 			return false;
 		}
-
-		return true;
 	}
+
+	return true;
 }
 
 export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
@@ -240,12 +246,10 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 
 function getVar(path, vars, globalRoot) {
 	if (path[0] === "global" && globalRoot) {
-		return path;
+		return vars[path[1]];
 	} else {
 		if (vars[path[0]]) {
 			return vars[path[0]][path[1]];
 		}
-
-		return null;
 	}
 }

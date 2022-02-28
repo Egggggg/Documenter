@@ -30,10 +30,19 @@ export default function Vars(props) {
 
 	useEffect(() => {
 		const params = new URLSearchParams(search);
-		setGuide(params.get("guide"));
-	}, [search]);
+
+		if (!guide) {
+			setGuide(params.get("guide"));
+		}
+	}, [search, guide]);
 
 	useEffect(() => {
+		const params = new URLSearchParams(search);
+
+		if (params.get("guide")) {
+			return;
+		}
+
 		props.db
 			.find({ include_docs: true, selector: { type: "var" } })
 			.then((results) => {
@@ -68,11 +77,20 @@ export default function Vars(props) {
 
 				setVars(newVars);
 			});
-	}, [props.db, scopes]);
+	}, [props.db, scopes, guide, search]);
 
 	useEffect(() => {
-		if (guide && guide.startsWith("/create")) {
-			setRedirect(guide);
+		if (guide) {
+			if (guide.startsWith("/create")) {
+				setRedirect(guide);
+			} else if (guide === "v1") {
+				setVars({ global: { example: "6", example2: "12" } });
+			} else if (guide === "s1") {
+				setVars({
+					global: { example: "6", example2: "12" },
+					scope1: { example: "24", example2: "36", example3: "72" }
+				});
+			}
 		}
 	}, [guide]);
 
@@ -192,8 +210,11 @@ export default function Vars(props) {
 			return;
 		}
 
-		if (name.includes(".") || name.includes("/")) {
-			NotificationManager.error(null, "Name cannot include '.' or '/'");
+		if (name.includes(".") || name.includes("/") || name.includes(" ")) {
+			NotificationManager.error(
+				null,
+				"Name cannot include '.', '/', or ' ' (space)"
+			);
 
 			return;
 		}
@@ -293,7 +314,7 @@ export default function Vars(props) {
 			setIsTable(true);
 			setNewName(name);
 			setNewScope(key === "global" ? "" : key);
-			setTableData([...vars[key][name]]);
+			setTableData(JSON.parse(JSON.stringify(vars[key][name])));
 		}
 	};
 
@@ -348,12 +369,18 @@ export default function Vars(props) {
 	};
 
 	const evalValue = (val, scope, name) => {
-		let value = evaluateVal(val, vars, false, scope, name);
+		try {
+			let value = evaluateVal(val, vars, false, scope, name);
 
-		if (value === val) {
-			return [val, val];
-		} else {
-			return [`${val} (${value})`, value];
+			if (value === val) {
+				return [val, val];
+			} else {
+				return [`${val} (${value})`, value];
+			}
+		} catch (err) {
+			if (err.message === "too much recursion") {
+				return [err.message, null];
+			}
 		}
 	};
 
@@ -369,9 +396,7 @@ export default function Vars(props) {
 				output = [output, output];
 			}
 		} else {
-			console.log(table, outputIndex);
-
-			if (table[outputIndex].type === "var") {
+			if (outputIndex && table[outputIndex].type === "var") {
 				output = [table[outputIndex].value, output];
 			} else {
 				output = [output, output];
