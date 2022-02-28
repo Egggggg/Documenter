@@ -62,8 +62,8 @@ export default function Creator(props) {
 									doc.value,
 									newVars,
 									true,
-									doc.name,
-									doc.scope
+									doc.scope,
+									doc.name
 								)[0]
 							};
 						} else {
@@ -73,8 +73,8 @@ export default function Creator(props) {
 									doc.value,
 									newVars,
 									true,
-									doc.name,
-									doc.scope
+									doc.scope,
+									doc.name
 								)[0]
 							};
 						}

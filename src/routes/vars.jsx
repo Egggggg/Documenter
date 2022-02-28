@@ -359,6 +359,7 @@ export default function Vars(props) {
 
 	const listTable = (scope, name, table) => {
 		const comparisons = { eq: "==", lt: "<", gt: ">" };
+
 		let [output, outputIndex] = evaluateTable(table, vars, false, scope, name);
 
 		if (outputIndex === -1) {
@@ -368,6 +369,8 @@ export default function Vars(props) {
 				output = [output, output];
 			}
 		} else {
+			console.log(table, outputIndex);
+
 			if (table[outputIndex].type === "var") {
 				output = [table[outputIndex].value, output];
 			} else {
@@ -417,8 +420,6 @@ export default function Vars(props) {
 										</>
 									);
 								}
-
-								console.log(row);
 
 								return (
 									<>
