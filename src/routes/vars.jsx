@@ -18,6 +18,16 @@ const tableDefault = [
 	{ type: "literal", value: "", priority: "last", scope: "global" }
 ];
 
+const checkInvalidName = (name) => {
+	return (
+		name.indexOf(".") > -1 ||
+		name.indexOf("/") > -1 ||
+		name.indexOf(" ") > -1 ||
+		name.indexOf("{") > -1 ||
+		name.indexOf("}") > -1
+	);
+};
+
 export default function Vars(props) {
 	const [vars, setVars] = useState({});
 	const [newName, setNewName] = useState("");
@@ -27,6 +37,7 @@ export default function Vars(props) {
 	const [guide, setGuide] = useState(null);
 	const [redirect, setRedirect] = useState(null);
 	const [{ search }] = useState(useLocation());
+	const [newListItemType, setNewListItemType] = useState("literal");
 	const [listData, setListData] = useState(["list"]);
 	const [type, setType] = useState("basic");
 	const [tableData, setTableData] = useState(tableDefault);
@@ -126,13 +137,7 @@ export default function Vars(props) {
 			return;
 		}
 
-		if (
-			name.indexOf(".") > -1 ||
-			name.indexOf("/") > -1 ||
-			name.indexOf(" ") > -1 ||
-			name.indexOf("{") > -1 ||
-			name.indexOf("}") > -1
-		) {
+		if (checkInvalidName(name)) {
 			NotificationManager.error(
 				null,
 				"Name cannot include '.', '/', ' ' (space), '{', or '}'"
@@ -141,13 +146,7 @@ export default function Vars(props) {
 			return;
 		}
 
-		if (
-			scope.indexOf(".") > -1 ||
-			scope.indexOf("/") > -1 ||
-			scope.indexOf(" ") > -1 ||
-			scope.indexOf("{") > -1 ||
-			scope.indexOf("}") > -1
-		) {
+		if (checkInvalidName(scope)) {
 			NotificationManager.error(
 				null,
 				"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
@@ -249,13 +248,7 @@ export default function Vars(props) {
 			return;
 		}
 
-		if (
-			name.indexOf(".") > -1 ||
-			name.indexOf("/") > -1 ||
-			name.indexOf(" ") > -1 ||
-			name.indexOf("{") > -1 ||
-			name.indexOf("}") > -1
-		) {
+		if (checkInvalidName(name)) {
 			NotificationManager.error(
 				null,
 				"Name cannot include '.', '/', ' ' (space), '{', or '}'"
@@ -264,13 +257,7 @@ export default function Vars(props) {
 			return;
 		}
 
-		if (
-			scope.indexOf(".") > -1 ||
-			scope.indexOf("/") > -1 ||
-			scope.indexOf(" ") > -1 ||
-			scope.indexOf("{") > -1 ||
-			scope.indexOf("}") > -1
-		) {
+		if (checkInvalidName(scope)) {
 			NotificationManager.error(
 				null,
 				"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
@@ -349,6 +336,110 @@ export default function Vars(props) {
 		setNewName("");
 		setNewScope("");
 		setTableData(tableDefault);
+	};
+
+	const addList = (e) => {
+		e.preventDefault();
+
+		let scope = newScope.trim(" ");
+		let name = newName.trim(" ");
+		let exists = false;
+
+		if (!name) {
+			NotificationManager.error(null, "Please enter a name");
+
+			return;
+		}
+
+		if (checkInvalidName(name)) {
+			NotificationManager.error(
+				null,
+				"Name cannot include '.', '/', ' ' (space), '{', or '}'"
+			);
+
+			return;
+		}
+
+		if (checkInvalidName(scope)) {
+			NotificationManager.error(
+				null,
+				"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
+			);
+
+			return;
+		}
+
+		if (!tableData[0].value) {
+			NotificationManager.error(null, "Please enter a default value");
+
+			return;
+		}
+
+		if (!scope) {
+			scope = "global";
+		}
+
+		if (vars[scope]) {
+			exists = Object.keys(vars[scope]).indexOf(name) > -1;
+		}
+
+		if (scope === "global" && scopes.indexOf(name) > -1) {
+			NotificationManager.error(
+				null,
+				"There is already a scope with this name"
+			);
+
+			return;
+		}
+
+		// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
+		if (
+			vars.global &&
+			(typeof vars.global[scope] === "string" ||
+				vars.global[scope] instanceof Array)
+		) {
+			NotificationManager.error(
+				null,
+				"There is a variable in the global scope with this scope name"
+			);
+
+			return;
+		}
+
+		if (exists) {
+			props.db
+				.find({ selector: { type: "var", scope, name } })
+				.then((results) => {
+					props.db.put({
+						_id: results.docs[0]._id,
+						_rev: results.docs[0]._rev,
+						name,
+						value: listData,
+						scope,
+						type: "var"
+					});
+				});
+		} else {
+			props.db.post({
+				name,
+				value: listData,
+				scope,
+				type: "var"
+			});
+		}
+
+		setVars({
+			...vars,
+			[scope]: {
+				...vars[scope],
+				[name]: listData
+			}
+		});
+
+		setNewName("");
+		setNewScope("");
+		setNewValue("");
+		setListData(["list"]);
 	};
 
 	const newNameChange = (e) => {
@@ -920,49 +1011,61 @@ export default function Vars(props) {
 				)}
 				{type === "list" && (
 					<>
-						<Form.Group className="float-end" controlId="">
-							<Form.Label>{title}</Form.Label>
-							<Form.Control
-								value={getter(data)[valKey]}
-								onChange={(e) => {
-									const copy = [...tableData];
+						<Form
+							onSubmit={(e) => {
+								e.preventDefault();
 
-									setter(copy)[valKey] = e.target.value;
+								console.log(newValue);
 
-									setTableData(copy);
-								}}
-								type="text"
-								placeholder={placeholder}
-							/>
-							<ToggleButtonGroup
-								type="radio"
-								value={getter(data)[typeKey]}
-								onChange={(val) => {
-									const copy = [...tableData];
-
-									setter(copy)[typeKey] = val;
-
-									setTableData(copy);
-								}}
-								name={buttonsName}
-								className="mb-3"
-							>
-								<ToggleButton
-									id={`${prependId}-type-literal`}
-									variant="outline-primary"
-									value="literal"
+								const copy = [...listData];
+								copy.push([newValue, newListItemType]);
+								setListData(copy);
+							}}
+						>
+							<Form.Group controlId="newListItem">
+								<Form.Label>New Item</Form.Label>
+								<Form.Control
+									value={newValue}
+									onChange={(e) => setNewValue(e.target.value)}
+									type="text"
+									placeholder="Value"
+								/>
+								<ToggleButtonGroup
+									type="radio"
+									value={newListItemType}
+									onChange={setNewListItemType}
+									name="newListItemType"
+									className="mb-3"
 								>
-									Literal
-								</ToggleButton>
-								<ToggleButton
-									id={`${prependId}-type-var`}
-									variant="outline-primary"
-									value="var"
-								>
-									Variable
-								</ToggleButton>
-							</ToggleButtonGroup>
-						</Form.Group>
+									<ToggleButton
+										id="list-item-type-literal"
+										variant="outline-primary"
+										value="literal"
+									>
+										Literal
+									</ToggleButton>
+									<ToggleButton
+										id="list-item-type-var"
+										variant="outline-primary"
+										value="var"
+									>
+										Variable
+									</ToggleButton>
+								</ToggleButtonGroup>
+								<br />
+								<Button type="submit" className="float-none">
+									Add Item
+								</Button>
+							</Form.Group>
+						</Form>
+						<ListGroup>
+							<h2>Items</h2>
+							{listData.map((item, index) => {
+								if (index === 0) return <></>;
+
+								return <ListGroup.Item>{item}</ListGroup.Item>;
+							})}
+						</ListGroup>
 					</>
 				)}
 				<br />
