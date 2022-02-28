@@ -163,7 +163,7 @@ export default function List(props) {
 	const addFilter = (e) => {
 		e.preventDefault();
 
-		if (!filters.includes(filterValue)) {
+		if (filters.indexOf(filterValue) === -1) {
 			setFilters([...filters, filterValue]);
 		}
 
@@ -194,7 +194,7 @@ export default function List(props) {
 
 	const compile = (item) => {
 		try {
-			const exists = Object.keys(vars).includes(item.scope);
+			const exists = Object.keys(vars).indexOf(item.scope) > -1;
 
 			return Handlebars.compile(
 				item.scope && exists

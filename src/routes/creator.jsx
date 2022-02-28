@@ -158,7 +158,7 @@ export default function Creator(props) {
 	const addTag = (e) => {
 		e.preventDefault();
 
-		if (!tags.includes(tagValue)) {
+		if (tags.indexOf(tagValue) === -1) {
 			setTags([...tags, tagValue]);
 		}
 
@@ -204,7 +204,7 @@ export default function Creator(props) {
 
 	const compile = () => {
 		try {
-			const exists = Object.keys(vars).includes(scope);
+			const exists = Object.keys(vars).indexOf(scope) > -1;
 
 			return Handlebars.compile(
 				scope && exists ? `{{#with ${scope}}}${mdValue}{{/with}}` : mdValue

@@ -471,7 +471,7 @@ export default function SaveLoad(props) {
 	const loadCSV = (text) => {
 		const { data } = Papa.parse(text);
 
-		if (!data[0].includes("Name") || !data[0].includes("Value")) {
+		if (data[0].indexOf("Name") === -1 || data[0].indexOf("Value") === -1) {
 			NotificationManager.warning(null, "Name and Value columns are required");
 			return;
 		}
@@ -480,7 +480,7 @@ export default function SaveLoad(props) {
 		const valueIndex = data[0].indexOf("Value");
 		let scopeIndex;
 
-		if (data[0].includes("Scope")) {
+		if (data[0].indexOf("Scope") > -1) {
 			scopeIndex = data[0].indexOf("Scope");
 		}
 

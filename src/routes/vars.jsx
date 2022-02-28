@@ -61,7 +61,7 @@ export default function Vars(props) {
 						newVars[doc.scope][doc.name][0].scope = doc.scope;
 					}
 
-					if (!scopes.includes(doc.scope)) {
+					if (scopes.indexOf(doc.scope) === -1) {
 						setScopes([...scopes, doc.scope]);
 					}
 				});
@@ -104,10 +104,10 @@ export default function Vars(props) {
 		}
 
 		if (vars[scope]) {
-			exists = Object.keys(vars[scope]).includes(name);
+			exists = Object.keys(vars[scope]).indexOf(name) > -1;
 		}
 
-		if (scope === "global" && scopes.includes(name)) {
+		if (scope === "global" && scopes.indexOf(name) > -1) {
 			NotificationManager.error(
 				null,
 				"There is already a scope with this name"
@@ -116,10 +116,10 @@ export default function Vars(props) {
 			return;
 		}
 
-		// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
 		if (
 			vars.global &&
-			!["object", "undefined"].includes(typeof vars.global[scope])
+			(typeof vars.global[scope] === "string" ||
+				vars.global[scope] instanceof Array)
 		) {
 			NotificationManager.error(
 				null,
@@ -192,7 +192,7 @@ export default function Vars(props) {
 			return;
 		}
 
-		if (name.includes(".") || name.includes("/")) {
+		if (name.indexOf(".") > -1 || name.indexOf("/") > -1) {
 			NotificationManager.error(null, "Name cannot include '.' or '/'");
 
 			return;
@@ -209,10 +209,10 @@ export default function Vars(props) {
 		}
 
 		if (vars[scope]) {
-			exists = Object.keys(vars[scope]).includes(name);
+			exists = Object.keys(vars[scope]).indexOf(name) > -1;
 		}
 
-		if (scope === "global" && scopes.includes(name)) {
+		if (scope === "global" && scopes.indexOf(name) > -1) {
 			NotificationManager.error(
 				null,
 				"There is already a scope with this name"
@@ -224,7 +224,8 @@ export default function Vars(props) {
 		// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
 		if (
 			vars.global &&
-			!["object", "undefined"].includes(typeof vars.global[scope])
+			(typeof vars.global[scope] === "string" ||
+				vars.global[scope] instanceof Array)
 		) {
 			NotificationManager.error(
 				null,
