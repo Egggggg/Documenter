@@ -203,8 +203,6 @@ export default function SaveLoad(props) {
 
 		setShowModal(true);
 
-		const file = e.target.elements.formBasicLoadFile.files[0];
-
 		if (loadOptions.addType === "replaceAll") {
 			let results = [];
 
@@ -231,8 +229,11 @@ export default function SaveLoad(props) {
 			}
 		}
 
+		const file = e.target.elements.formBasicLoadFile.files[0];
+
 		if (!file) {
 			setShowModal(false);
+			return;
 		}
 
 		if (file.type === "application/json") {

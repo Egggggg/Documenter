@@ -30,10 +30,19 @@ export default function Vars(props) {
 
 	useEffect(() => {
 		const params = new URLSearchParams(search);
-		setGuide(params.get("guide"));
-	}, [search]);
+
+		if (!guide) {
+			setGuide(params.get("guide"));
+		}
+	}, [search, guide]);
 
 	useEffect(() => {
+		const params = new URLSearchParams(search);
+
+		if (params.get("guide")) {
+			return;
+		}
+
 		props.db
 			.find({ include_docs: true, selector: { type: "var" } })
 			.then((results) => {
@@ -68,11 +77,20 @@ export default function Vars(props) {
 
 				setVars(newVars);
 			});
-	}, [props.db, scopes]);
+	}, [props.db, scopes, guide, search]);
 
 	useEffect(() => {
-		if (guide && guide.startsWith("/create")) {
-			setRedirect(guide);
+		if (guide) {
+			if (guide.startsWith("/create")) {
+				setRedirect(guide);
+			} else if (guide === "v1") {
+				setVars({ global: { example: "6", example2: "12" } });
+			} else if (guide === "s1") {
+				setVars({
+					global: { example: "6", example2: "12" },
+					scope1: { example: "24", example2: "36", example3: "72" }
+				});
+			}
 		}
 	}, [guide]);
 
@@ -192,84 +210,89 @@ export default function Vars(props) {
 			return;
 		}
 
-		if (name.indexOf(".") > -1 || name.indexOf("/") > -1) {
-			NotificationManager.error(null, "Name cannot include '.' or '/'");
-
-			return;
-		}
-
-		if (!tableData[0].value) {
-			NotificationManager.error(null, "Please enter a default value");
-
-			return;
-		}
-
-		if (!scope) {
-			scope = "global";
-		}
-
-		if (vars[scope]) {
-			exists = Object.keys(vars[scope]).indexOf(name) > -1;
-		}
-
-		if (scope === "global" && scopes.indexOf(name) > -1) {
-			NotificationManager.error(
-				null,
-				"There is already a scope with this name"
-			);
-
-			return;
-		}
-
-		// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
 		if (
-			vars.global &&
-			(typeof vars.global[scope] === "string" ||
-				vars.global[scope] instanceof Array)
+			name.indexOf(".") > -1 ||
+			name.indexOf("/") > -1 ||
+			name.indexOf(" ") > -1
 		) {
 			NotificationManager.error(
 				null,
-				"There is a variable in the global scope with this scope name"
+				"Name cannot include '.', '/', or ' ' (space)"
 			);
 
-			return;
-		}
+			if (!tableData[0].value) {
+				NotificationManager.error(null, "Please enter a default value");
 
-		if (exists) {
-			props.db
-				.find({ selector: { type: "var", scope, name } })
-				.then((results) => {
-					props.db.put({
-						_id: results.docs[0]._id,
-						_rev: results.docs[0]._rev,
-						name,
-						value: tableData,
-						scope,
-						type: "var"
-					});
-				});
-		} else {
-			props.db.post({
-				name,
-				value: tableData,
-				scope,
-				type: "var"
-			});
-		}
-
-		setVars({
-			...vars,
-			[scope]: {
-				...vars[scope],
-				[name]: tableData
+				return;
 			}
-		});
 
-		setNewName("");
-		setNewScope("");
-		setTableData([
-			{ type: "literal", value: "", priority: "last", scope: "global" }
-		]);
+			if (!scope) {
+				scope = "global";
+			}
+
+			if (vars[scope]) {
+				exists = Object.keys(vars[scope]).indexOf(name) > -1;
+			}
+
+			if (scope === "global" && scopes.indexOf(name) > -1) {
+				NotificationManager.error(
+					null,
+					"There is already a scope with this name"
+				);
+
+				return;
+			}
+
+			// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
+			if (
+				vars.global &&
+				(typeof vars.global[scope] === "string" ||
+					vars.global[scope] instanceof Array)
+			) {
+				NotificationManager.error(
+					null,
+					"There is a variable in the global scope with this scope name"
+				);
+
+				return;
+			}
+
+			if (exists) {
+				props.db
+					.find({ selector: { type: "var", scope, name } })
+					.then((results) => {
+						props.db.put({
+							_id: results.docs[0]._id,
+							_rev: results.docs[0]._rev,
+							name,
+							value: tableData,
+							scope,
+							type: "var"
+						});
+					});
+			} else {
+				props.db.post({
+					name,
+					value: tableData,
+					scope,
+					type: "var"
+				});
+			}
+
+			setVars({
+				...vars,
+				[scope]: {
+					...vars[scope],
+					[name]: tableData
+				}
+			});
+
+			setNewName("");
+			setNewScope("");
+			setTableData([
+				{ type: "literal", value: "", priority: "last", scope: "global" }
+			]);
+		}
 	};
 
 	const newNameChange = (e) => {
@@ -294,7 +317,7 @@ export default function Vars(props) {
 			setIsTable(true);
 			setNewName(name);
 			setNewScope(key === "global" ? "" : key);
-			setTableData([...vars[key][name]]);
+			setTableData(JSON.parse(JSON.stringify(vars[key][name])));
 		}
 	};
 
@@ -349,17 +372,24 @@ export default function Vars(props) {
 	};
 
 	const evalValue = (val, scope, name) => {
-		let value = evaluateVal(val, vars, false, scope, name);
+		try {
+			let value = evaluateVal(val, vars, false, scope, name);
 
-		if (value === val) {
-			return [val, val];
-		} else {
-			return [`${val} (${value})`, value];
+			if (value === val) {
+				return [val, val];
+			} else {
+				return [`${val} (${value})`, value];
+			}
+		} catch (err) {
+			if (err.message === "too much recursion") {
+				return [err.message, null];
+			}
 		}
 	};
 
 	const listTable = (scope, name, table) => {
 		const comparisons = { eq: "==", lt: "<", gt: ">" };
+
 		let [output, outputIndex] = evaluateTable(table, vars, false, scope, name);
 
 		if (outputIndex === -1) {
@@ -369,7 +399,7 @@ export default function Vars(props) {
 				output = [output, output];
 			}
 		} else {
-			if (table[outputIndex].type === "var") {
+			if (outputIndex && table[outputIndex].type === "var") {
 				output = [table[outputIndex].value, output];
 			} else {
 				output = [output, output];
@@ -418,8 +448,6 @@ export default function Vars(props) {
 										</>
 									);
 								}
-
-								console.log(row);
 
 								return (
 									<>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Navigate, NavLink } from "react-router-dom";
 import MDEditor from "@uiw/react-md-editor";
 import Handlebars from "handlebars/dist/handlebars.min.js";
@@ -37,6 +37,32 @@ export default function List(props) {
 	const [page, setPage] = useState(0);
 	const [pages, setPages] = useState(1);
 
+	const refresh = useCallback(() => {
+		const sortOrderKeys = { Ascending: "asc", Descending: "desc" };
+		const selector = {
+			type: "document",
+			sortKey: { $gte: null }
+		};
+
+		if (filters.length > 0) {
+			selector.tags = {
+				$in: filters
+			};
+		}
+
+		props.db
+			.find({
+				limit: perPage,
+				skip: 5 * page,
+				include_docs: true,
+				selector,
+				sort: [{ sortKey: sortOrderKeys[sortOrder] }]
+			})
+			.then((results) => {
+				setItems(results.docs);
+			});
+	}, [filters, page, props.db, sortOrder]);
+
 	useEffect(() => {
 		props.db
 			.find({
@@ -57,13 +83,11 @@ export default function List(props) {
 					}
 				});
 
-				let newTables = {};
-
 				results.docs.forEach((doc) => {
 					if (typeof doc.value !== "string") {
 						if (doc.scope === "global") {
-							newTables = {
-								...newTables,
+							newVars = {
+								...newVars,
 								[doc.name]: evaluateTable(
 									doc.value,
 									newVars,
@@ -73,8 +97,8 @@ export default function List(props) {
 								)[0]
 							};
 						} else {
-							newTables[doc.scope] = {
-								...newTables[doc.scope],
+							newVars[doc.scope] = {
+								...newVars[doc.scope],
 								[doc.name]: evaluateTable(
 									doc.value,
 									newVars,
@@ -87,9 +111,9 @@ export default function List(props) {
 					}
 				});
 
-				newVars = { ...newVars, ...newTables };
-
 				setVars(newVars);
+
+				console.log(newVars);
 			});
 	}, [props.db]);
 
@@ -116,31 +140,20 @@ export default function List(props) {
 			});
 	});
 
-	useEffect(() => {
-		const sortOrderKeys = { Ascending: "asc", Descending: "desc" };
-		const selector = {
+	useEffect(refresh, [refresh]);
+
+	const copyDoc = (doc) => () => {
+		props.db.post({
+			name: doc.name,
+			tags: doc.tags,
+			text: doc.text,
 			type: "document",
-			sortKey: { $gte: null }
-		};
+			sortKey: doc.sortKey,
+			scope: doc.scope
+		});
 
-		if (filters.length > 0) {
-			selector.tags = {
-				$in: filters
-			};
-		}
-
-		props.db
-			.find({
-				limit: perPage,
-				skip: 5 * page,
-				include_docs: true,
-				selector,
-				sort: [{ sortKey: sortOrderKeys[sortOrder] }]
-			})
-			.then((results) => {
-				setItems(results.docs);
-			});
-	}, [props.db, filters, sortOrder, page]);
+		refresh();
+	};
 
 	const editDoc = (id) => () => {
 		setRedirect(`/create?id=${id}`);
@@ -275,11 +288,17 @@ export default function List(props) {
 						<Card>
 							<Card.Header>
 								<h1 className="float-start">{item.name}</h1>
-								<Button className="float-end" onClick={deleteDoc(item._id)}>
+								<Button
+									className="float-end me-3"
+									onClick={deleteDoc(item._id)}
+								>
 									Delete
 								</Button>
-								<Button className="float-end" onClick={editDoc(item._id)}>
+								<Button className="float-end me-3" onClick={editDoc(item._id)}>
 									Edit
+								</Button>
+								<Button className="float-end me-3" onClick={copyDoc(item)}>
+									Copy
 								</Button>
 							</Card.Header>
 							<Card.Body>
