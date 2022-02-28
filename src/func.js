@@ -192,7 +192,7 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 
 			val = vars[path[0]];
 
-			if (typeof val !== "string") {
+			if (typeof val !== "string" && !(val instanceof Array)) {
 				val = evaluateTable(val, vars, globalRoot, scope, name, depth)[0];
 			}
 		} else {
@@ -207,7 +207,7 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 
 				val = vars.global[path[0]];
 
-				if (typeof val !== "string") {
+				if (typeof val !== "string" && !(val instanceof Array)) {
 					val = evaluateTable(
 						val,
 						vars,
@@ -233,7 +233,7 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 
 			val = vars[path[0]][path[1]];
 
-			if (typeof val !== "string") {
+			if (typeof val !== "string" && !(val instanceof Array)) {
 				val = evaluateTable(val, vars, globalRoot, path[0], path[1], depth)[0];
 			}
 		} else {

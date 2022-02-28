@@ -58,7 +58,7 @@ export default function Creator(props) {
 				results.docs.forEach((doc) => {
 					console.log(doc);
 
-					if (typeof doc.value !== "string") {
+					if (typeof doc.value !== "string" && !(doc.value instanceof Array)) {
 						if (doc.scope === "global") {
 							newVars = {
 								...newVars,

@@ -66,7 +66,10 @@ export default function Vars(props) {
 						[doc.name]: doc.value
 					};
 
-					if (typeof newVars[doc.scope][doc.name] !== "string") {
+					if (
+						typeof newVars[doc.scope][doc.name] !== "string" &&
+						!(newVars[doc.scope][doc.name] instanceof Array)
+					) {
 						newVars[doc.scope][doc.name][0].scope = doc.scope;
 					}
 
