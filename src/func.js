@@ -10,8 +10,6 @@ const depthMax = 10;
 // chain keeps track of accessed tables and purpose
 // chain gets cleared when purpose changes
 export function evaluateTable(table, vars, globalRoot, scope, name, depth) {
-	console.log(scope, name);
-
 	if (!depth) {
 		depth = 0;
 	}
@@ -19,17 +17,41 @@ export function evaluateTable(table, vars, globalRoot, scope, name, depth) {
 	depth++;
 
 	if (depth > depthMax) {
-		return ["circular dependency", null];
+		return ["too much recursion", null];
 	}
 
 	// the first entry of a table is always the default value and priority entry
 	if (table[0].priority === "last") {
 		for (let row = table.length - 1; row > 0; row--) {
-			return evalIteration(row, table, vars, globalRoot, scope, name, depth);
+			const iteration = evalIteration(
+				row,
+				table,
+				vars,
+				globalRoot,
+				scope,
+				name,
+				depth
+			);
+
+			if (iteration) {
+				return iteration;
+			}
 		}
 	} else {
 		for (let row = 1; row < table.length; row++) {
-			return evalIteration(row, table, vars, globalRoot, scope, name, depth);
+			const iteration = evalIteration(
+				row,
+				table,
+				vars,
+				globalRoot,
+				scope,
+				name,
+				depth
+			);
+
+			if (iteration) {
+				return iteration;
+			}
 		}
 	}
 
@@ -93,7 +115,7 @@ function evalIteration(row, table, vars, globalRoot, scope, name, depth) {
 			return [table[row][0].value, row];
 		}
 	} catch (err) {
-		if (err.message === "circular dependency") {
+		if (err.message === "too much recursion") {
 			return [err.message, null];
 		}
 
@@ -140,8 +162,6 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 
 	let path = val.split(".");
 
-	console.log(scope, name);
-
 	if (path.length === 1) {
 		if (up) {
 			if (!globalRoot) {
@@ -154,9 +174,6 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 		}
 	}
 
-	console.log(path);
-	console.log(vars);
-
 	if (path.length === 1) {
 		if (globalRoot) {
 			if (!vars[path[0]]) {
@@ -164,7 +181,7 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 			}
 
 			if (scope === "global" && name === path[0]) {
-				throw Error("circular dependency");
+				throw Error("too much recursion");
 			}
 
 			val = vars[path[0]];
@@ -200,7 +217,7 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 		}
 	} else if (path.length === 2) {
 		if (scope === path[0] && name === path[1]) {
-			throw Error("circular dependency");
+			throw Error("too much recursion");
 		}
 
 		if (vars[path[0]]) {
@@ -214,7 +231,6 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 				val = evaluateTable(val, vars, globalRoot, path[0], path[1], depth)[0];
 			}
 		} else {
-			console.log(vars, path, scope, name);
 			return "scope does not exist";
 		}
 	}
@@ -223,8 +239,6 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 }
 
 function getVar(path, vars, globalRoot) {
-	console.log(path, vars);
-
 	if (path[0] === "global" && globalRoot) {
 		return path;
 	} else {
