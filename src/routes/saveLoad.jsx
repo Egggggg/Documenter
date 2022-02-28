@@ -315,6 +315,29 @@ export default function SaveLoad(props) {
 			})
 			.join("");
 
+		name = name.trim(" ");
+		scope = scope.trim(" ");
+
+		if (
+			name.indexOf(".") > -1 ||
+			name.indexOf("/") > -1 ||
+			name.indexOf(" ") > -1 ||
+			name.indexOf("{") > -1 ||
+			name.indexOf("}") > -1
+		) {
+			return;
+		}
+
+		if (
+			scope.indexOf(".") > -1 ||
+			scope.indexOf("/") > -1 ||
+			scope.indexOf(" ") > -1 ||
+			scope.indexOf("{") > -1 ||
+			scope.indexOf("}") > -1
+		) {
+			return;
+		}
+
 		if (scope === "global") {
 			const results = await props.db.find({
 				selector: { scope: name },

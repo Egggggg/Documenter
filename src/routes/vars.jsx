@@ -14,6 +14,10 @@ import ToggleButton from "react-bootstrap/ToggleButton";
 import ToggleButtonGroup from "react-bootstrap/ToggleButtonGroup";
 import { evaluateTable, evaluateVal } from "../func";
 
+const tableDefault = [
+	{ type: "literal", value: "", priority: "last", scope: "global" }
+];
+
 export default function Vars(props) {
 	const [vars, setVars] = useState({});
 	const [newName, setNewName] = useState("");
@@ -23,10 +27,9 @@ export default function Vars(props) {
 	const [guide, setGuide] = useState(null);
 	const [redirect, setRedirect] = useState(null);
 	const [{ search }] = useState(useLocation());
-	const [isTable, setIsTable] = useState(false);
-	const [tableData, setTableData] = useState([
-		{ type: "literal", value: "", priority: "last", scope: "global" }
-	]);
+	const [listData, setListData] = useState(["list"]);
+	const [type, setType] = useState("basic");
+	const [tableData, setTableData] = useState(tableDefault);
 
 	useEffect(() => {
 		const params = new URLSearchParams(search);
@@ -98,14 +101,17 @@ export default function Vars(props) {
 	}, [guide]);
 
 	useEffect(() => {
-		if (isTable) {
+		if (type === "basic") {
+			setTableData(tableDefault);
+			setListData(["list"]);
+		} else if (type === "table") {
 			setNewValue("");
-		} else {
-			setTableData([
-				{ type: "literal", value: "", priority: "last", scope: "global" }
-			]);
+			setListData(["list"]);
+		} else if (type === "list") {
+			setNewValue("");
+			setTableData(tableDefault);
 		}
-	}, [isTable]);
+	}, [type]);
 
 	const addVar = (e) => {
 		e.preventDefault();
@@ -116,6 +122,36 @@ export default function Vars(props) {
 
 		if (!name) {
 			NotificationManager.error(null, "Please enter a name");
+
+			return;
+		}
+
+		if (
+			name.indexOf(".") > -1 ||
+			name.indexOf("/") > -1 ||
+			name.indexOf(" ") > -1 ||
+			name.indexOf("{") > -1 ||
+			name.indexOf("}") > -1
+		) {
+			NotificationManager.error(
+				null,
+				"Name cannot include '.', '/', ' ' (space), '{', or '}'"
+			);
+
+			return;
+		}
+
+		if (
+			scope.indexOf(".") > -1 ||
+			scope.indexOf("/") > -1 ||
+			scope.indexOf(" ") > -1 ||
+			scope.indexOf("{") > -1 ||
+			scope.indexOf("}") > -1
+		) {
+			NotificationManager.error(
+				null,
+				"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
+			);
 
 			return;
 		}
@@ -207,7 +243,7 @@ export default function Vars(props) {
 		let name = newName.trim(" ");
 		let exists = false;
 
-		if (!name.trim(" ")) {
+		if (!name) {
 			NotificationManager.error(null, "Please enter a name");
 
 			return;
@@ -216,86 +252,103 @@ export default function Vars(props) {
 		if (
 			name.indexOf(".") > -1 ||
 			name.indexOf("/") > -1 ||
-			name.indexOf(" ") > -1
+			name.indexOf(" ") > -1 ||
+			name.indexOf("{") > -1 ||
+			name.indexOf("}") > -1
 		) {
 			NotificationManager.error(
 				null,
-				"Name cannot include '.', '/', or ' ' (space)"
+				"Name cannot include '.', '/', ' ' (space), '{', or '}'"
 			);
 
-			if (!tableData[0].value) {
-				NotificationManager.error(null, "Please enter a default value");
-
-				return;
-			}
-
-			if (!scope) {
-				scope = "global";
-			}
-
-			if (vars[scope]) {
-				exists = Object.keys(vars[scope]).indexOf(name) > -1;
-			}
-
-			if (scope === "global" && scopes.indexOf(name) > -1) {
-				NotificationManager.error(
-					null,
-					"There is already a scope with this name"
-				);
-
-				return;
-			}
-
-			// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
-			if (
-				vars.global &&
-				(typeof vars.global[scope] === "string" ||
-					vars.global[scope] instanceof Array)
-			) {
-				NotificationManager.error(
-					null,
-					"There is a variable in the global scope with this scope name"
-				);
-
-				return;
-			}
-
-			if (exists) {
-				props.db
-					.find({ selector: { type: "var", scope, name } })
-					.then((results) => {
-						props.db.put({
-							_id: results.docs[0]._id,
-							_rev: results.docs[0]._rev,
-							name,
-							value: tableData,
-							scope,
-							type: "var"
-						});
-					});
-			} else {
-				props.db.post({
-					name,
-					value: tableData,
-					scope,
-					type: "var"
-				});
-			}
-
-			setVars({
-				...vars,
-				[scope]: {
-					...vars[scope],
-					[name]: tableData
-				}
-			});
-
-			setNewName("");
-			setNewScope("");
-			setTableData([
-				{ type: "literal", value: "", priority: "last", scope: "global" }
-			]);
+			return;
 		}
+
+		if (
+			scope.indexOf(".") > -1 ||
+			scope.indexOf("/") > -1 ||
+			scope.indexOf(" ") > -1 ||
+			scope.indexOf("{") > -1 ||
+			scope.indexOf("}") > -1
+		) {
+			NotificationManager.error(
+				null,
+				"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
+			);
+
+			return;
+		}
+
+		if (!tableData[0].value) {
+			NotificationManager.error(null, "Please enter a default value");
+
+			return;
+		}
+
+		if (!scope) {
+			scope = "global";
+		}
+
+		if (vars[scope]) {
+			exists = Object.keys(vars[scope]).indexOf(name) > -1;
+		}
+
+		if (scope === "global" && scopes.indexOf(name) > -1) {
+			NotificationManager.error(
+				null,
+				"There is already a scope with this name"
+			);
+
+			return;
+		}
+
+		// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
+		if (
+			vars.global &&
+			(typeof vars.global[scope] === "string" ||
+				vars.global[scope] instanceof Array)
+		) {
+			NotificationManager.error(
+				null,
+				"There is a variable in the global scope with this scope name"
+			);
+
+			return;
+		}
+
+		if (exists) {
+			props.db
+				.find({ selector: { type: "var", scope, name } })
+				.then((results) => {
+					props.db.put({
+						_id: results.docs[0]._id,
+						_rev: results.docs[0]._rev,
+						name,
+						value: tableData,
+						scope,
+						type: "var"
+					});
+				});
+		} else {
+			props.db.post({
+				name,
+				value: tableData,
+				scope,
+				type: "var"
+			});
+		}
+
+		setVars({
+			...vars,
+			[scope]: {
+				...vars[scope],
+				[name]: tableData
+			}
+		});
+
+		setNewName("");
+		setNewScope("");
+		setTableData(tableDefault);
 	};
 
 	const newNameChange = (e) => {
@@ -312,12 +365,17 @@ export default function Vars(props) {
 
 	const selectVar = (key, name) => () => {
 		if (typeof vars[key][name] === "string") {
-			setIsTable(false);
+			setType("basic");
 			setNewName(name);
 			setNewScope(key === "global" ? "" : key);
 			setNewValue(vars[key][name]);
+		} else if (typeof vars[key][name][0] === "string") {
+			setType("list");
+			setNewName(name);
+			setNewScope(key === "global" ? "" : key);
+			setListData(JSON.parse(JSON.stringify(vars[key][name])));
 		} else {
-			setIsTable(true);
+			setType("table");
 			setNewName(name);
 			setNewScope(key === "global" ? "" : key);
 			setTableData(JSON.parse(JSON.stringify(vars[key][name])));
@@ -387,6 +445,8 @@ export default function Vars(props) {
 			if (err.message === "too much recursion") {
 				return [err.message, null];
 			}
+
+			throw err;
 		}
 	};
 
@@ -397,13 +457,14 @@ export default function Vars(props) {
 
 		if (outputIndex === -1) {
 			if (table[0].type === "var") {
-				output = [table[0].value, output];
+				output = evalValue(table[0].value, scope, name);
+				console.log(output);
 			} else {
 				output = [output, output];
 			}
 		} else {
 			if (outputIndex && table[outputIndex].type === "var") {
-				output = [table[outputIndex].value, output];
+				output = evalValue(table[outputIndex].value, scope, name);
 			} else {
 				output = [output, output];
 			}
@@ -580,10 +641,12 @@ export default function Vars(props) {
 			</OverlayTrigger>
 			<Form
 				onSubmit={(e) => {
-					if (isTable) {
-						addTable(e);
-					} else {
+					if (type === "basic") {
 						addVar(e);
+					} else if (type === "table") {
+						addTable(e);
+					} else if (type === "list") {
+						addList(e);
 					}
 				}}
 			>
@@ -631,28 +694,33 @@ export default function Vars(props) {
 				<br />
 				<ToggleButtonGroup
 					type="radio"
-					value={isTable}
-					onChange={(val) => setIsTable(val)}
+					value={type}
+					onChange={(val) => {
+						setType(val);
+					}}
 					name="isTable"
 					className="mb-2"
 				>
 					<ToggleButton
-						id="option-not-table"
+						id="option-basic"
 						variant="outline-primary"
-						value={false}
+						value="basic"
 					>
 						Basic
 					</ToggleButton>
 					<ToggleButton
 						id="option-table"
 						variant="outline-primary"
-						value={true}
+						value="table"
 					>
 						Table
 					</ToggleButton>
+					<ToggleButton id="option-list" variant="outline-primary" value="list">
+						List
+					</ToggleButton>
 				</ToggleButtonGroup>
 				<br />
-				{!isTable && (
+				{type === "basic" && (
 					<OverlayTrigger
 						placement="bottom"
 						overlay={popover(
@@ -674,7 +742,7 @@ export default function Vars(props) {
 						</Form.Group>
 					</OverlayTrigger>
 				)}
-				{isTable && (
+				{type === "table" && (
 					<>
 						<Form.Label>Priority</Form.Label>
 						<br />
@@ -848,6 +916,53 @@ export default function Vars(props) {
 								</Card>
 							);
 						})}
+					</>
+				)}
+				{type === "list" && (
+					<>
+						<Form.Group className="float-end" controlId="">
+							<Form.Label>{title}</Form.Label>
+							<Form.Control
+								value={getter(data)[valKey]}
+								onChange={(e) => {
+									const copy = [...tableData];
+
+									setter(copy)[valKey] = e.target.value;
+
+									setTableData(copy);
+								}}
+								type="text"
+								placeholder={placeholder}
+							/>
+							<ToggleButtonGroup
+								type="radio"
+								value={getter(data)[typeKey]}
+								onChange={(val) => {
+									const copy = [...tableData];
+
+									setter(copy)[typeKey] = val;
+
+									setTableData(copy);
+								}}
+								name={buttonsName}
+								className="mb-3"
+							>
+								<ToggleButton
+									id={`${prependId}-type-literal`}
+									variant="outline-primary"
+									value="literal"
+								>
+									Literal
+								</ToggleButton>
+								<ToggleButton
+									id={`${prependId}-type-var`}
+									variant="outline-primary"
+									value="var"
+								>
+									Variable
+								</ToggleButton>
+							</ToggleButtonGroup>
+						</Form.Group>
 					</>
 				)}
 				<br />

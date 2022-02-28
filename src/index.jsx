@@ -42,8 +42,6 @@ Handlebars.registerHelper("lt", (arg1, arg2) => {
 Handlebars.registerHelper("add", function () {
 	let sum = 0;
 
-	console.log(arguments);
-
 	// subtract 1 to remove the lookup property from being a helper
 	for (let i = 0; i < arguments.length - 1; i++) {
 		let argNum = parseFloat(arguments[i]);
@@ -52,9 +50,7 @@ Handlebars.registerHelper("add", function () {
 			argNum = Math.floor(argNum);
 		}
 
-		console.log(argNum);
 		sum += argNum;
-		console.log(sum);
 	}
 
 	return sum;
@@ -120,23 +116,28 @@ PouchDB.plugin(PouchDBFind);
 let db = new PouchDB("documents", { auto_compaction: true });
 
 db.createIndex({
-	index: { fields: ["sortKey", "tags", "type"], ddoc: "tags" }
+	index: { fields: ["sortKey", "tags", "type", "collection"], ddoc: "tags" }
 })
 	.then(() =>
 		db.createIndex({
-			index: { fields: ["sortKey", "type"], ddoc: "type" }
+			index: { fields: ["sortKey", "type", "collection"], ddoc: "type" }
 		})
 	)
-	.then(() => {
+	.then(() =>
 		db.createIndex({
-			index: { fields: ["type", "name", "tag"], ddoc: "vars" }
-		});
-	})
-	.then(() => {
+			index: { fields: ["type", "name", "tag", "collection"], ddoc: "vars" }
+		})
+	)
+	.then(() =>
 		db.createIndex({
-			index: { fields: ["scope", "name"], ddoc: "scopes" }
-		});
-	});
+			index: { fields: ["scope", "name", "collection"], ddoc: "scopes" }
+		})
+	)
+	.then(() =>
+		db.createIndex({
+			index: { fields: ["type", "collection"], ddoc: "collection" }
+		})
+	);
 
 ReactDOM.render(
 	<React.StrictMode>

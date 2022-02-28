@@ -1,3 +1,5 @@
+import Handlebars from "handlebars/dist/handlebars.min.js";
+
 const comparisons = {
 	// eslint-disable-next-line eqeqeq
 	eq: (arg1, arg2) => arg1 == arg2,
@@ -55,7 +57,7 @@ export function evaluateTable(table, vars, globalRoot, scope, name, depth) {
 		}
 	}
 
-	if (typeof table[0].value === "string") {
+	if (table[0].type === "literal") {
 		return [table[0].value, -1];
 	} else {
 		return [
@@ -166,7 +168,11 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 		val = val.substring(3);
 	}
 
-	let path = val.split(".");
+	let path = [];
+
+	if (!val.startsWith("{{") && !val.endsWith("}}")) {
+		path = val.split(".");
+	}
 
 	if (path.length === 1) {
 		if (up) {
@@ -180,14 +186,16 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 		}
 	}
 
+	console.log(vars, val, path);
+
 	if (path.length === 1) {
 		if (globalRoot) {
-			if (!vars[path[0]]) {
-				return "variable does not exist";
-			}
-
 			if (scope === "global" && name === path[0]) {
 				throw Error("too much recursion");
+			}
+
+			if (!vars[path[0]]) {
+				return "variable does not exist";
 			}
 
 			val = vars[path[0]];
@@ -197,7 +205,7 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 			}
 		} else {
 			if (scope === "global" && name === path[0]) {
-				return val;
+				throw Error("too much recursion");
 			}
 
 			if (vars.global) {
@@ -239,6 +247,20 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 		} else {
 			return "scope does not exist";
 		}
+	} else {
+		let tempVars = { ...vars };
+
+		if (!globalRoot) {
+			delete tempVars.global;
+
+			tempVars = { ...tempVars, ...vars.global };
+		}
+
+		console.log(tempVars, val, scope);
+
+		return Handlebars.compile(
+			scope === "global" ? val : `{{#with ${scope}}}${val}{{/with}}`
+		)(tempVars);
 	}
 
 	return val;

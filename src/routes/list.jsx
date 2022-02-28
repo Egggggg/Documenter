@@ -84,7 +84,10 @@ export default function List(props) {
 				});
 
 				results.docs.forEach((doc) => {
-					if (typeof doc.value !== "string" && !(doc.value instanceof Array)) {
+					if (
+						typeof doc.value !== "string" &&
+						typeof doc.value[0] !== "string"
+					) {
 						if (doc.scope === "global") {
 							newVars = {
 								...newVars,
