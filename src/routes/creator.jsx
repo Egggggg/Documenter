@@ -55,15 +55,13 @@ export default function Creator(props) {
 					}
 				});
 
-				let newTables = {};
-
 				results.docs.forEach((doc) => {
 					console.log(doc);
 
 					if (typeof doc.value !== "string") {
 						if (doc.scope === "global") {
-							newTables = {
-								...newTables,
+							newVars = {
+								...newVars,
 								[doc.name]: evaluateTable(
 									doc.value,
 									newVars,
@@ -73,8 +71,10 @@ export default function Creator(props) {
 								)[0]
 							};
 						} else {
-							newTables[doc.scope] = {
-								...newTables[doc.scope],
+							console.log(doc.scope, doc.name, doc.value, newVars);
+
+							newVars[doc.scope] = {
+								...newVars[doc.scope],
 								[doc.name]: evaluateTable(
 									doc.value,
 									newVars,
@@ -83,11 +83,11 @@ export default function Creator(props) {
 									doc.name
 								)[0]
 							};
+
+							console.log(newVars[doc.scope][doc.name]);
 						}
 					}
 				});
-
-				newVars = { ...newVars, ...newTables };
 
 				setVars(newVars);
 			});
