@@ -1011,59 +1011,69 @@ export default function Vars(props) {
 				)}
 				{type === "list" && (
 					<>
-						<Form
-							onSubmit={(e) => {
-								e.preventDefault();
-
-								console.log(newValue);
-
-								const copy = [...listData];
-								copy.push([newValue, newListItemType]);
-								setListData(copy);
-							}}
-						>
-							<Form.Group controlId="newListItem">
-								<Form.Label>New Item</Form.Label>
-								<Form.Control
-									value={newValue}
-									onChange={(e) => setNewValue(e.target.value)}
-									type="text"
-									placeholder="Value"
-								/>
-								<ToggleButtonGroup
-									type="radio"
-									value={newListItemType}
-									onChange={setNewListItemType}
-									name="newListItemType"
-									className="mb-3"
+						<Form.Group controlId="newListItem">
+							<Form.Label>New Item</Form.Label>
+							<Form.Control
+								value={newValue}
+								onChange={(e) => {
+									console.log(e.target.value);
+									setNewValue(e.target.value);
+								}}
+								type="text"
+								placeholder="Value"
+							/>
+							<ToggleButtonGroup
+								type="radio"
+								value={newListItemType}
+								onChange={setNewListItemType}
+								name="newListItemType"
+								className="mb-3"
+							>
+								<ToggleButton
+									id="list-item-type-literal"
+									variant="outline-primary"
+									value="literal"
 								>
-									<ToggleButton
-										id="list-item-type-literal"
-										variant="outline-primary"
-										value="literal"
-									>
-										Literal
-									</ToggleButton>
-									<ToggleButton
-										id="list-item-type-var"
-										variant="outline-primary"
-										value="var"
-									>
-										Variable
-									</ToggleButton>
-								</ToggleButtonGroup>
-								<br />
-								<Button type="submit" className="float-none">
-									Add Item
-								</Button>
-							</Form.Group>
-						</Form>
+									Literal
+								</ToggleButton>
+								<ToggleButton
+									id="list-item-type-var"
+									variant="outline-primary"
+									value="var"
+								>
+									Variable
+								</ToggleButton>
+							</ToggleButtonGroup>
+							<br />
+							<Button
+								onClick={() => {
+									console.log(newValue);
+
+									const copy = [...listData];
+									copy.push([newValue, newListItemType]);
+									setListData(copy);
+								}}
+								className="float-none"
+							>
+								Add Item
+							</Button>
+						</Form.Group>
 						<ListGroup>
 							<h2>Items</h2>
 							{listData.map((item, index) => {
+								console.log(item);
+
 								if (index === 0) return <></>;
 
-								return <ListGroup.Item>{item}</ListGroup.Item>;
+								if (item[1] === "literal") {
+									return <ListGroup.Item>{item[0]}</ListGroup.Item>;
+								} else if (item[1] === "var") {
+									return (
+										<ListGroup.Item>
+											{evalValue(item[0], newScope || "global", newName)[0]}
+										</ListGroup.Item>
+									);
+								}
 							})}
 						</ListGroup>
 					</>
