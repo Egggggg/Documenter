@@ -83,13 +83,11 @@ export default function List(props) {
 					}
 				});
 
-				let newTables = {};
-
 				results.docs.forEach((doc) => {
 					if (typeof doc.value !== "string") {
 						if (doc.scope === "global") {
-							newTables = {
-								...newTables,
+							newVars = {
+								...newVars,
 								[doc.name]: evaluateTable(
 									doc.value,
 									newVars,
@@ -99,8 +97,8 @@ export default function List(props) {
 								)[0]
 							};
 						} else {
-							newTables[doc.scope] = {
-								...newTables[doc.scope],
+							newVars[doc.scope] = {
+								...newVars[doc.scope],
 								[doc.name]: evaluateTable(
 									doc.value,
 									newVars,
@@ -113,9 +111,9 @@ export default function List(props) {
 					}
 				});
 
-				newVars = { ...newVars, ...newTables };
-
 				setVars(newVars);
+
+				console.log(newVars);
 			});
 	}, [props.db]);
 
