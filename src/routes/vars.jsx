@@ -39,112 +39,105 @@ function addVar(
 	setNewName,
 	setNewValue
 ) {
-	return (e) => {
-		e.preventDefault();
+	let scope = newScope.trim(" ");
+	let name = newName.trim(" ");
+	let exists = false;
 
-		let scope = newScope.trim(" ");
-		let name = newName.trim(" ");
-		let exists = false;
+	if (!name) {
+		NotificationManager.error(null, "Please enter a name");
 
-		if (!name) {
-			NotificationManager.error(null, "Please enter a name");
+		return;
+	}
 
-			return;
-		}
+	if (checkInvalidName(name)) {
+		NotificationManager.error(
+			null,
+			"Name cannot include '.', '/', ' ' (space), '{', or '}'"
+		);
 
-		if (checkInvalidName(name)) {
-			NotificationManager.error(
-				null,
-				"Name cannot include '.', '/', ' ' (space), '{', or '}'"
-			);
+		return;
+	}
 
-			return;
-		}
+	if (checkInvalidName(scope)) {
+		NotificationManager.error(
+			null,
+			"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
+		);
 
-		if (checkInvalidName(scope)) {
-			NotificationManager.error(
-				null,
-				"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
-			);
+		return;
+	}
 
-			return;
-		}
+	if (!scope) {
+		scope = "global";
+	}
 
-		if (!scope) {
-			scope = "global";
-		}
+	if (vars[scope]) {
+		exists = Object.keys(vars[scope]).indexOf(name) > -1;
+	}
 
-		if (vars[scope]) {
-			exists = Object.keys(vars[scope]).indexOf(name) > -1;
-		}
+	if (scope === "global" && scopes.indexOf(name) > -1) {
+		NotificationManager.error(null, "There is already a scope with this name");
 
-		if (scope === "global" && scopes.indexOf(name) > -1) {
-			NotificationManager.error(
-				null,
-				"There is already a scope with this name"
-			);
+		return;
+	}
 
-			return;
-		}
+	if (
+		vars.global &&
+		(typeof vars.global[scope] === "string" ||
+			vars.global[scope] instanceof Array)
+	) {
+		NotificationManager.error(
+			null,
+			"There is a variable in the global scope with this scope name"
+		);
 
-		if (
-			vars.global &&
-			(typeof vars.global[scope] === "string" ||
-				vars.global[scope] instanceof Array)
-		) {
-			NotificationManager.error(
-				null,
-				"There is a variable in the global scope with this scope name"
-			);
+		return;
+	}
 
-			return;
-		}
-
-		if (exists) {
-			if (!newValue) {
-				db.find({ selector: { type: "var", scope, name } }).then((results) => {
-					db.remove(results.docs[0]);
+	if (exists) {
+		if (!newValue) {
+			db.find({ selector: { type: "var", scope, name } }).then((results) => {
+				db.remove(results.docs[0]);
+			});
+		} else {
+			db.find({ selector: { type: "var", scope, name } }).then((results) => {
+				db.put({
+					_id: results.docs[0]._id,
+					_rev: results.docs[0]._rev,
+					name,
+					value: newValue,
+					scope,
+					type: "var"
 				});
-			} else {
-				db.find({ selector: { type: "var", scope, name } }).then((results) => {
-					db.put({
-						_id: results.docs[0]._id,
-						_rev: results.docs[0]._rev,
-						name,
-						value: newValue,
-						scope,
-						type: "var"
-					});
-				});
-			}
-		} else if (newValue !== "") {
-			db.post({
-				name,
-				value: newValue,
-				scope,
-				type: "var"
 			});
 		}
+	} else if (newValue !== "") {
+		db.post({
+			name,
+			value: newValue,
+			scope,
+			type: "var"
+		});
+	}
 
-		if (newValue) {
-			setVars({
-				...vars,
-				[scope]: { ...vars[scope], [name]: newValue }
-			});
-		} else if (exists) {
-			const newVars = { ...vars };
-			delete newVars[scope][name];
+	if (newValue) {
+		setVars({
+			...vars,
+			[scope]: { ...vars[scope], [name]: newValue }
+		});
+	} else if (exists) {
+		const newVars = { ...vars };
+		delete newVars[scope][name];
 
-			if (Object.keys(newVars[scope]).length === 0) {
-				delete newVars[scope];
-			}
-
-			setVars(newVars);
+		if (Object.keys(newVars[scope]).length === 0) {
+			delete newVars[scope];
 		}
 
-		setNewName("");
-		setNewValue("");
-	};
+		setVars(newVars);
+	}
+
+	setNewName("");
+	setNewValue("");
 }
 
 function addTable(
@@ -159,106 +152,99 @@ function addTable(
 	setNewScope,
 	setTableData
 ) {
-	return (e) => {
-		e.preventDefault();
+	let scope = newScope.trim(" ");
+	let name = newName.trim(" ");
+	let exists = false;
 
-		let scope = newScope.trim(" ");
-		let name = newName.trim(" ");
-		let exists = false;
+	if (!name) {
+		NotificationManager.error(null, "Please enter a name");
 
-		if (!name) {
-			NotificationManager.error(null, "Please enter a name");
+		return;
+	}
 
-			return;
-		}
+	if (checkInvalidName(name)) {
+		NotificationManager.error(
+			null,
+			"Name cannot include '.', '/', ' ' (space), '{', or '}'"
+		);
 
-		if (checkInvalidName(name)) {
-			NotificationManager.error(
-				null,
-				"Name cannot include '.', '/', ' ' (space), '{', or '}'"
-			);
+		return;
+	}
 
-			return;
-		}
+	if (checkInvalidName(scope)) {
+		NotificationManager.error(
+			null,
+			"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
+		);
 
-		if (checkInvalidName(scope)) {
-			NotificationManager.error(
-				null,
-				"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
-			);
+		return;
+	}
 
-			return;
-		}
+	if (!tableData[0].value) {
+		NotificationManager.error(null, "Please enter a default value");
 
-		if (!tableData[0].value) {
-			NotificationManager.error(null, "Please enter a default value");
+		return;
+	}
 
-			return;
-		}
+	if (!scope) {
+		scope = "global";
+	}
 
-		if (!scope) {
-			scope = "global";
-		}
+	if (vars[scope]) {
+		exists = Object.keys(vars[scope]).indexOf(name) > -1;
+	}
 
-		if (vars[scope]) {
-			exists = Object.keys(vars[scope]).indexOf(name) > -1;
-		}
+	if (scope === "global" && scopes.indexOf(name) > -1) {
+		NotificationManager.error(null, "There is already a scope with this name");
 
-		if (scope === "global" && scopes.indexOf(name) > -1) {
-			NotificationManager.error(
-				null,
-				"There is already a scope with this name"
-			);
+		return;
+	}
 
-			return;
-		}
+	// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
+	if (
+		vars.global &&
+		(typeof vars.global[scope] === "string" ||
+			vars.global[scope] instanceof Array)
+	) {
+		NotificationManager.error(
+			null,
+			"There is a variable in the global scope with this scope name"
+		);
 
-		// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
-		if (
-			vars.global &&
-			(typeof vars.global[scope] === "string" ||
-				vars.global[scope] instanceof Array)
-		) {
-			NotificationManager.error(
-				null,
-				"There is a variable in the global scope with this scope name"
-			);
+		return;
+	}
 
-			return;
-		}
-
-		if (exists) {
-			db.find({ selector: { type: "var", scope, name } }).then((results) => {
-				db.put({
-					_id: results.docs[0]._id,
-					_rev: results.docs[0]._rev,
-					name,
-					value: tableData,
-					scope,
-					type: "var"
-				});
-			});
-		} else {
-			db.post({
+	if (exists) {
+		db.find({ selector: { type: "var", scope, name } }).then((results) => {
+			db.put({
+				_id: results.docs[0]._id,
+				_rev: results.docs[0]._rev,
 				name,
 				value: tableData,
 				scope,
 				type: "var"
 			});
-		}
-
-		setVars({
-			...vars,
-			[scope]: {
-				...vars[scope],
-				[name]: tableData
-			}
 		});
+	} else {
+		db.post({
+			name,
+			value: tableData,
+			scope,
+			type: "var"
+		});
+	}
 
-		setNewName("");
-		setNewScope("");
-		setTableData(tableDefault);
-	};
+	setVars({
+		...vars,
+		[scope]: {
+			...vars[scope],
+			[name]: tableData
+		}
+	});
+
+	setNewName("");
+	setNewScope("");
+	setTableData(tableDefault);
 }
 
 function addList(
@@ -274,101 +260,94 @@ function addList(
 	setNewValue,
 	setListData
 ) {
-	return (e) => {
-		e.preventDefault();
+	let scope = newScope.trim(" ");
+	let name = newName.trim(" ");
+	let exists = false;
 
-		let scope = newScope.trim(" ");
-		let name = newName.trim(" ");
-		let exists = false;
+	if (!name) {
+		NotificationManager.error(null, "Please enter a name");
 
-		if (!name) {
-			NotificationManager.error(null, "Please enter a name");
+		return;
+	}
 
-			return;
-		}
+	if (checkInvalidName(name)) {
+		NotificationManager.error(
+			null,
+			"Name cannot include '.', '/', ' ' (space), '{', or '}'"
+		);
 
-		if (checkInvalidName(name)) {
-			NotificationManager.error(
-				null,
-				"Name cannot include '.', '/', ' ' (space), '{', or '}'"
-			);
+		return;
+	}
 
-			return;
-		}
+	if (checkInvalidName(scope)) {
+		NotificationManager.error(
+			null,
+			"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
+		);
 
-		if (checkInvalidName(scope)) {
-			NotificationManager.error(
-				null,
-				"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
-			);
+		return;
+	}
 
-			return;
-		}
+	if (!scope) {
+		scope = "global";
+	}
 
-		if (!scope) {
-			scope = "global";
-		}
+	if (vars[scope]) {
+		exists = Object.keys(vars[scope]).indexOf(name) > -1;
+	}
 
-		if (vars[scope]) {
-			exists = Object.keys(vars[scope]).indexOf(name) > -1;
-		}
+	if (scope === "global" && scopes.indexOf(name) > -1) {
+		NotificationManager.error(null, "There is already a scope with this name");
 
-		if (scope === "global" && scopes.indexOf(name) > -1) {
-			NotificationManager.error(
-				null,
-				"There is already a scope with this name"
-			);
+		return;
+	}
 
-			return;
-		}
+	// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
+	if (
+		vars.global &&
+		(typeof vars.global[scope] === "string" ||
+			vars.global[scope] instanceof Array)
+	) {
+		NotificationManager.error(
+			null,
+			"There is a variable in the global scope with this scope name"
+		);
 
-		// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
-		if (
-			vars.global &&
-			(typeof vars.global[scope] === "string" ||
-				vars.global[scope] instanceof Array)
-		) {
-			NotificationManager.error(
-				null,
-				"There is a variable in the global scope with this scope name"
-			);
+		return;
+	}
 
-			return;
-		}
-
-		if (exists) {
-			db.find({ selector: { type: "var", scope, name } }).then((results) => {
-				db.put({
-					_id: results.docs[0]._id,
-					_rev: results.docs[0]._rev,
-					name,
-					value: listData,
-					scope,
-					type: "var"
-				});
-			});
-		} else {
-			db.post({
+	if (exists) {
+		db.find({ selector: { type: "var", scope, name } }).then((results) => {
+			db.put({
+				_id: results.docs[0]._id,
+				_rev: results.docs[0]._rev,
 				name,
 				value: listData,
 				scope,
 				type: "var"
 			});
-		}
-
-		setVars({
-			...vars,
-			[scope]: {
-				...vars[scope],
-				[name]: listData
-			}
 		});
+	} else {
+		db.post({
+			name,
+			value: listData,
+			scope,
+			type: "var"
+		});
+	}
 
-		setNewName("");
-		setNewScope("");
-		setNewValue("");
-		setListData(["list"]);
-	};
+	setVars({
+		...vars,
+		[scope]: {
+			...vars[scope],
+			[name]: listData
+		}
+	});
+
+	setNewName("");
+	setNewScope("");
+	setNewValue("");
+	setListData(["list"]);
 }
 
 function selectVar(
@@ -378,26 +357,26 @@ function selectVar(
 	setNewScope,
 	setNewValue,
 	setListData,
-	setTableData
+	setTableData,
+	key,
+	name
 ) {
-	return (key, name) => () => {
-		if (typeof vars[key][name] === "string") {
-			setType("basic");
-			setNewName(name);
-			setNewScope(key === "global" ? "" : key);
-			setNewValue(vars[key][name]);
-		} else if (typeof vars[key][name][0] === "string") {
-			setType("list");
-			setNewName(name);
-			setNewScope(key === "global" ? "" : key);
-			setListData(JSON.parse(JSON.stringify(vars[key][name])));
-		} else {
-			setType("table");
-			setNewName(name);
-			setNewScope(key === "global" ? "" : key);
-			setTableData(JSON.parse(JSON.stringify(vars[key][name])));
-		}
-	};
+	if (typeof vars[key][name] === "string") {
+		setType("basic");
+		setNewName(name);
+		setNewScope(key === "global" ? "" : key);
+		setNewValue(vars[key][name]);
+	} else if (typeof vars[key][name][0] === "string") {
+		setType("list");
+		setNewName(name);
+		setNewScope(key === "global" ? "" : key);
+		setListData(JSON.parse(JSON.stringify(vars[key][name])));
+	} else {
+		setType("table");
+		setNewName(name);
+		setNewScope(key === "global" ? "" : key);
+		setTableData(JSON.parse(JSON.stringify(vars[key][name])));
+	}
 }
 
 function popover(setGuide) {
@@ -419,7 +398,7 @@ function popover(setGuide) {
 	};
 }
 
-const addRow = (setTableData, tableData) => {
+function addRow(setTableData, tableData) {
 	setTableData([
 		...tableData,
 		[
@@ -436,7 +415,244 @@ const addRow = (setTableData, tableData) => {
 			}
 		]
 	]);
+}
+
+function addCondition(tableData, index, setTableData) {
+	return () => {
+		const copy = [...tableData];
+
+		copy[index].push({
+			val1Type: "var",
+			val1: "",
+			comparison: "eq",
+			val2Type: "literal",
+			val2: ""
+		});
+
+		setTableData(copy);
+	};
+}
+
+const evalValue = (vars, val, scope, name) => {
+	try {
+		let value = evaluateVal(val, vars, false, scope, name);
+
+		if (value === val) {
+			return [val, val];
+		} else {
+			return [`${val} (${value})`, value];
+		}
+	} catch (err) {
+		if (err.message === "too much recursion") {
+			return [err.message, null];
+		}
+
+		throw err;
+	}
 };
+
+const listTable = (
+	vars,
+	scope,
+	name,
+	table,
+	setType,
+	setNewName,
+	setNewScope,
+	setNewValue,
+	setListData,
+	setTableData
+) => {
+	const comparisons = { eq: "==", lt: "<", gt: ">" };
+
+	let [output, outputIndex] = evaluateTable(table, vars, false, scope, name);
+
+	if (outputIndex === -1) {
+		if (table[0].type === "var") {
+			output = evalValue(vars, table[0].value, scope, name);
+		} else {
+			output = [output, output];
+		}
+	} else {
+		if (outputIndex && table[outputIndex].type === "var") {
+			output = evalValue(vars, table[outputIndex].value, scope, name);
+		} else {
+			output = [output, output];
+		}
+	}
+
+	return (
+		<>
+			<h3
+				onClick={() =>
+					selectVar(
+						vars,
+						setType,
+						setNewName,
+						setNewScope,
+						setNewValue,
+						setListData,
+						setTableData,
+						scope,
+						name
+					)
+				}
+			>
+				{name}
+			</h3>
+			<details>
+				<summary>Table</summary>
+				<Table bordered hover size="sm">
+					<thead>
+						<tr>
+							<th className="w-25">Argument 1</th>
+							<th className="w-25">Comparison</th>
+							<th className="w-25">Argument 2</th>
+							<th className="w-25">Output</th>
+						</tr>
+					</thead>
+					<tbody>
+						{table.map((row, index) => {
+							if (index === 0) {
+								return (
+									<>
+										<tr key="default">
+											<td>DEFAULT</td>
+											<td>DEFAULT</td>
+											<td>DEFAULT</td>
+											<td
+												className={
+													outputIndex === -1 ? "bg-primary text-light" : ""
+												}
+											>
+												{row.type === "var"
+													? evalValue(vars, row.value, scope, name)[0]
+													: row.value}
+											</td>
+										</tr>
+										<tr key="output" className="bg-primary text-light">
+											<td>OUTPUT</td>
+											<td>OUTPUT</td>
+											<td>OUTPUT</td>
+											<td>{output[1]}</td>
+										</tr>
+									</>
+								);
+							}
+
+							return (
+								<>
+									{row.map((condition, rowIndex) => {
+										if (rowIndex === 0) {
+											return <></>;
+										}
+
+										let val1 = condition.val1;
+										let val2 = condition.val2;
+										let comparison = comparisons[condition.comparison];
+
+										if (condition.val1Type === "var") {
+											val1 = evalValue(vars, val1, scope, name)[0];
+										}
+
+										if (condition.val2Type === "var") {
+											val2 = evalValue(vars, val2, scope, name)[0];
+										}
+
+										return (
+											<tr key={rowIndex}>
+												<td>{val1}</td>
+												<td>{comparison}</td>
+												<td>{val2}</td>
+											</tr>
+										);
+									})}
+									<tr key={`${index}-output`}>
+										<td></td>
+										<td></td>
+										<td></td>
+										<td
+											className={
+												outputIndex === index ? "bg-primary text-light" : ""
+											}
+										>
+											{row[0].type === "var"
+												? evalValue(vars, row[0].value, scope, name)[0]
+												: row[0].value}
+										</td>
+									</tr>
+								</>
+							);
+						})}
+					</tbody>
+				</Table>
+			</details>
+		</>
+	);
+};
+
+const valEntry = (
+	setTableData,
+	tableData,
+	controlId,
+	buttonsName,
+	title,
+	placeholder,
+	getter,
+	setter,
+	prependId,
+	data,
+	className,
+	valKey,
+	typeKey
+) => {
+	return (
+		<Form.Group className={className} controlId={controlId}>
+			<Form.Label>{title}</Form.Label>
+			<Form.Control
+				value={getter(data)[valKey]}
+				onChange={(e) => {
+					const copy = [...tableData];
+
+					setter(copy)[valKey] = e.target.value;
+
+					setTableData(copy);
+				}}
+				type="text"
+				placeholder={placeholder}
+			/>
+			<ToggleButtonGroup
+				type="radio"
+				value={getter(data)[typeKey]}
+				onChange={(val) => {
+					const copy = [...tableData];
+
+					setter(copy)[typeKey] = val;
+
+					setTableData(copy);
+				}}
+				name={buttonsName}
+				className="mb-3"
+			>
+				<ToggleButton
+					id={`${prependId}-type-literal`}
+					variant="outline-primary"
+					value="literal"
+				>
+					Literal
+				</ToggleButton>
+				<ToggleButton
+					id={`${prependId}-type-var`}
+					variant="outline-primary"
+					value="var"
+				>
+					Variable
+				</ToggleButton>
+			</ToggleButtonGroup>
+		</Form.Group>
+	);
+};
+
 export default function Vars(props) {
 	const [vars, setVars] = useState({});
 	const [newName, setNewName] = useState("");
@@ -533,232 +749,6 @@ export default function Vars(props) {
 		}
 	}, [type]);
 
-	const addCondition = (index) => () => {
-		const copy = [...tableData];
-
-		copy[index].push({
-			val1Type: "var",
-			val1: "",
-			comparison: "eq",
-			val2Type: "literal",
-			val2: ""
-		});
-
-		setTableData(copy);
-	};
-
-	const evalValue = (val, scope, name) => {
-		try {
-			let value = evaluateVal(val, vars, false, scope, name);
-
-			if (value === val) {
-				return [val, val];
-			} else {
-				return [`${val} (${value})`, value];
-			}
-		} catch (err) {
-			if (err.message === "too much recursion") {
-				return [err.message, null];
-			}
-
-			throw err;
-		}
-	};
-
-	const listTable = (scope, name, table) => {
-		const comparisons = { eq: "==", lt: "<", gt: ">" };
-
-		let [output, outputIndex] = evaluateTable(table, vars, false, scope, name);
-
-		if (outputIndex === -1) {
-			if (table[0].type === "var") {
-				output = evalValue(table[0].value, scope, name);
-			} else {
-				output = [output, output];
-			}
-		} else {
-			if (outputIndex && table[outputIndex].type === "var") {
-				output = evalValue(table[outputIndex].value, scope, name);
-			} else {
-				output = [output, output];
-			}
-		}
-
-		return (
-			<>
-				<h3
-					onClick={() =>
-						selectVar(
-							vars,
-							setType,
-							setNewName,
-							setNewScope,
-							setNewValue,
-							setListData,
-							setTableData
-						)(scope, name)
-					}
-				>
-					{name}
-				</h3>
-				<details>
-					<summary>Table</summary>
-					<Table bordered hover size="sm">
-						<thead>
-							<tr>
-								<th className="w-25">Argument 1</th>
-								<th className="w-25">Comparison</th>
-								<th className="w-25">Argument 2</th>
-								<th className="w-25">Output</th>
-							</tr>
-						</thead>
-						<tbody>
-							{table.map((row, index) => {
-								if (index === 0) {
-									return (
-										<>
-											<tr>
-												<td>DEFAULT</td>
-												<td>DEFAULT</td>
-												<td>DEFAULT</td>
-												<td
-													className={
-														outputIndex === -1 ? "bg-primary text-light" : ""
-													}
-												>
-													{row.type === "var"
-														? evalValue(row.value, scope, name)[0]
-														: row.value}
-												</td>
-											</tr>
-											<tr className="bg-primary text-light">
-												<td>OUTPUT</td>
-												<td>OUTPUT</td>
-												<td>OUTPUT</td>
-												<td>{output[1]}</td>
-											</tr>
-										</>
-									);
-								}
-
-								return (
-									<>
-										{row.map((condition, rowIndex) => {
-											if (rowIndex === 0) {
-												return <></>;
-											}
-
-											let val1 = condition.val1;
-											let val2 = condition.val2;
-											let comparison = comparisons[condition.comparison];
-
-											if (condition.val1Type === "var") {
-												val1 = evalValue(val1, scope, name)[0];
-											}
-
-											if (condition.val2Type === "var") {
-												val2 = evalValue(val2, scope, name)[0];
-											}
-
-											return (
-												<tr key={rowIndex}>
-													<td>{val1}</td>
-													<td>{comparison}</td>
-													<td>{val2}</td>
-												</tr>
-											);
-										})}
-										<tr>
-											<td></td>
-											<td></td>
-											<td></td>
-											<td
-												className={
-													outputIndex === index ? "bg-primary text-light" : ""
-												}
-											>
-												{row[0].type === "var"
-													? evalValue(row[0].value, scope, name)[0]
-													: row[0].value}
-											</td>
-										</tr>
-									</>
-								);
-							})}
-						</tbody>
-					</Table>
-				</details>
-			</>
-		);
-	};
-
-	const valEntry = (
-		controlId,
-		buttonsName,
-		title,
-		placeholder,
-		getter,
-		setter,
-		prependId,
-		data,
-		className,
-		valKey,
-		typeKey
-	) => {
-		return (
-			<Form.Group className={className} controlId={controlId}>
-				<Form.Label>{title}</Form.Label>
-				<Form.Control
-					value={getter(data)[valKey]}
-					onChange={(e) => {
-						const copy = [...tableData];
-
-						setter(copy)[valKey] = e.target.value;
-
-						setTableData(copy);
-					}}
-					type="text"
-					placeholder={placeholder}
-				/>
-				<ToggleButtonGroup
-					type="radio"
-					value={getter(data)[typeKey]}
-					onChange={(val) => {
-						const copy = [...tableData];
-
-						setter(copy)[typeKey] = val;
-
-						setTableData(copy);
-					}}
-					name={buttonsName}
-					className="mb-3"
-				>
-					<ToggleButton
-						id={`${prependId}-type-literal`}
-						variant="outline-primary"
-						value="literal"
-					>
-						Literal
-					</ToggleButton>
-					<ToggleButton
-						id={`${prependId}-type-var`}
-						variant="outline-primary"
-						value="var"
-					>
-						Variable
-					</ToggleButton>
-				</ToggleButtonGroup>
-			</Form.Group>
-		);
-	};
-
-	const removeListItem = (index) => () => {
-		const output = [...listData];
-		output.splice(index, 1);
-
-		setListData(output);
-	};
-
 	return (
 		<Container>
 			{redirect && <Navigate to={redirect} />}
@@ -776,7 +766,9 @@ export default function Vars(props) {
 			</OverlayTrigger>
 			<Form
 				onSubmit={(e) => {
-					console.log(type);
+					console.log(e);
+
+					e.preventDefault();
 
 					if (type === "basic") {
 						addVar(
@@ -929,6 +921,8 @@ export default function Vars(props) {
 						</ToggleButtonGroup>
 						<br />
 						{valEntry(
+							setTableData,
+							tableData,
 							"formBasicTableDefault",
 							"formBasicDefaultType",
 							"Default Value",
@@ -941,7 +935,9 @@ export default function Vars(props) {
 							"value",
 							"type"
 						)}
-						<Button onClick={addRow}>Add Output</Button>
+						<Button onClick={() => addRow(setTableData, tableData)}>
+							Add Output
+						</Button>
 						{tableData.map((row, index) => {
 							if (index === 0) return null;
 							return (
@@ -961,7 +957,10 @@ export default function Vars(props) {
 											Delete Output
 										</Button>
 									</Card.Header>
-									<Button className="w-25" onClick={addCondition(index)}>
+									<Button
+										className="w-25"
+										onClick={() => addCondition(tableData, index, setTableData)}
+									>
 										Add Condition
 									</Button>
 									{row.map((item, rowIndex) => {
@@ -970,6 +969,8 @@ export default function Vars(props) {
 										return (
 											<div key={rowIndex}>
 												{valEntry(
+													setTableData,
+													tableData,
 													`formBasic${index}${rowIndex}Val1`,
 													`formBasic${index}${rowIndex}Val1Type`,
 													"Value 1",
@@ -1022,6 +1023,8 @@ export default function Vars(props) {
 													</ToggleButtonGroup>
 												</Form.Group>
 												{valEntry(
+													setTableData,
+													tableData,
 													`formBasic${index}${rowIndex}Val2`,
 													`formBasic${index}${rowIndex}Val2Type`,
 													"Value 2",
@@ -1054,6 +1057,8 @@ export default function Vars(props) {
 										);
 									})}
 									{valEntry(
+										setTableData,
+										tableData,
 										`formBasic${index}Output`,
 										`formBasic${index}ValueType`,
 										"Output",
@@ -1137,29 +1142,52 @@ export default function Vars(props) {
 							{listData.map((item, index) => {
 								if (index === 0) return <></>;
 
-								if (item[1] === "literal") {
-									return (
-										<ListGroup.Item action onClick={removeListItem(index)}>
-											{item[0]}
-										</ListGroup.Item>
-									);
-								} else if (item[1] === "var") {
-									return (
-										<ListGroup.Item action onClick={removeListItem(index)}>
-											{evalValue(item[0], newScope || "global", newName)[0]}
-										</ListGroup.Item>
-									);
-								}
-
 								return (
-									<ListGroup.Item action onClick={removeListItem(index)}>
-										{item[0]} (invalid)
+									<ListGroup.Item
+										action
+										onClick={() => {
+											const output = [...listData];
+											output.splice(index, 1);
+
+											setListData(output);
+										}}
+									>
+										{item[1] === "literal" && item[0]}
+										{item[1] === "var" &&
+											evalValue(
+												vars,
+												item[0],
+												newScope || "global",
+												newName
+											)[0]}
+										{item[1] !== "literal" &&
+											item[1] !== "var" &&
+											`${item[0]} (invalid)`}
 									</ListGroup.Item>
 								);
 							})}
 						</ListGroup>
 					</Form>
-					<Button className="my-3" onClick={addList}>
+					<Button
+						className="my-3"
+						onClick={(e) => {
+							e.preventDefault();
+
+							addList(
+								newScope,
+								newName,
+								vars,
+								scopes,
+								props.db,
+								listData,
+								setVars,
+								setNewName,
+								setNewScope,
+								setNewValue,
+								setListData
+							);
+						}}
+					>
 						Add
 					</Button>
 					<br />
@@ -1195,8 +1223,10 @@ export default function Vars(props) {
 											setNewScope,
 											setNewValue,
 											setListData,
-											setTableData
-										)("global", name)}
+											setTableData,
+											"global",
+											name
+										)}
 									>
 										{`${name}: ${vars["global"][name]}`}
 									</ListGroup.Item>
@@ -1215,7 +1245,7 @@ export default function Vars(props) {
 													let val = item[0];
 
 													if (item[1] === "var") {
-														val = evalValue(val, "global", name)[0];
+														val = evalValue(vars, val, "global", name)[0];
 													}
 
 													return <ListGroup.Item>{val}</ListGroup.Item>;
@@ -1228,7 +1258,18 @@ export default function Vars(props) {
 								// table var
 								return (
 									<ListGroup.Item key={name}>
-										{listTable("global", name, vars["global"][name])}
+										{listTable(
+											vars,
+											"global",
+											name,
+											vars["global"][name],
+											setType,
+											setNewName,
+											setNewScope,
+											setNewValue,
+											setListData,
+											setTableData
+										)}
 									</ListGroup.Item>
 								);
 							}
@@ -1289,7 +1330,18 @@ export default function Vars(props) {
 										// table var
 										return (
 											<ListGroup.Item key={name}>
-												{listTable(key, name, vars[key][name])}
+												{listTable(
+													vars,
+													key,
+													name,
+													vars[key][name],
+													setType,
+													setNewName,
+													setNewScope,
+													setNewValue,
+													setListData,
+													setTableData
+												)}
 											</ListGroup.Item>
 										);
 									}
