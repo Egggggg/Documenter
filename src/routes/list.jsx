@@ -11,19 +11,6 @@ import DropdownButton from "react-bootstrap/DropdownButton";
 import ListGroup from "react-bootstrap/ListGroup";
 import { evaluateTable } from "../func";
 
-Handlebars.registerHelper("gt", (arg1, arg2) => {
-	return parseFloat(arg1) > parseFloat(arg2);
-});
-
-Handlebars.registerHelper("lt", (arg1, arg2) => {
-	return parseFloat(arg1) < parseFloat(arg2);
-});
-
-Handlebars.registerHelper("eq", (arg1, arg2) => {
-	// eslint-disable-next-line eqeqeq
-	return arg1 == arg2;
-});
-
 const perPage = 5;
 
 export default function List(props) {
