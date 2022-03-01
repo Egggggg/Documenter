@@ -341,6 +341,8 @@ export default function Vars(props) {
 	const addList = (e) => {
 		e.preventDefault();
 
+		console.log(newName, newValue, listData);
+
 		let scope = newScope.trim(" ");
 		let name = newName.trim(" ");
 		let exists = false;
@@ -365,12 +367,6 @@ export default function Vars(props) {
 				null,
 				"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
 			);
-
-			return;
-		}
-
-		if (!tableData[0].value) {
-			NotificationManager.error(null, "Please enter a default value");
 
 			return;
 		}
@@ -549,7 +545,6 @@ export default function Vars(props) {
 		if (outputIndex === -1) {
 			if (table[0].type === "var") {
 				output = evalValue(table[0].value, scope, name);
-				console.log(output);
 			} else {
 				output = [output, output];
 			}
@@ -732,12 +727,12 @@ export default function Vars(props) {
 			</OverlayTrigger>
 			<Form
 				onSubmit={(e) => {
+					console.log(type);
+
 					if (type === "basic") {
 						addVar(e);
 					} else if (type === "table") {
 						addTable(e);
-					} else if (type === "list") {
-						addList(e);
 					}
 				}}
 			>
@@ -1009,8 +1004,29 @@ export default function Vars(props) {
 						})}
 					</>
 				)}
-				{type === "list" && (
+				{type !== "list" && (
 					<>
+						<br />
+						<br />
+						<Button className="my-3" type="submit">
+							Add
+						</Button>
+					</>
+				)}
+			</Form>
+			{type === "list" && (
+				<>
+					<Form
+						onSubmit={(e) => {
+							e.preventDefault();
+
+							const copy = [...listData];
+							copy.push([newValue, newListItemType]);
+
+							setListData(copy);
+							setNewValue("");
+						}}
+					>
 						<Form.Group controlId="newListItem">
 							<Form.Label>New Item</Form.Label>
 							<Form.Control
@@ -1045,24 +1061,13 @@ export default function Vars(props) {
 								</ToggleButton>
 							</ToggleButtonGroup>
 							<br />
-							<Button
-								onClick={() => {
-									console.log(newValue);
-
-									const copy = [...listData];
-									copy.push([newValue, newListItemType]);
-									setListData(copy);
-								}}
-								className="float-none"
-							>
+							<Button type="submit" className="float-none">
 								Add Item
 							</Button>
 						</Form.Group>
 						<ListGroup>
 							<h2>Items</h2>
 							{listData.map((item, index) => {
-								console.log(item);
-
 								if (index === 0) return <></>;
 
 								if (item[1] === "literal") {
@@ -1074,17 +1079,17 @@ export default function Vars(props) {
 										</ListGroup.Item>
 									);
 								}
+
+								return <ListGroup.Item>{item[0]} (invalid)</ListGroup.Item>;
 							})}
 						</ListGroup>
-					</>
-				)}
-				<br />
-				<Button className="my-3" type="submit">
-					Add
-				</Button>
-			</Form>
-			<br />
-			<br />
+					</Form>
+					<Button className="my-3" onClick={addList}>
+						Add
+					</Button>
+					<br />
+				</>
+			)}
 			<OverlayTrigger
 				placement="top"
 				overlay={popover(
@@ -1111,6 +1116,29 @@ export default function Vars(props) {
 										onClick={selectVar("global", name)}
 									>
 										{`${name}: ${vars["global"][name]}`}
+									</ListGroup.Item>
+								);
+							} else if (typeof vars.global[name][0] === "string") {
+								// list var
+								return (
+									<ListGroup.Item key={name}>
+										<h3>{name}</h3>
+										<details>
+											<summary>List</summary>
+											<ListGroup>
+												{vars.global[name].map((item, index) => {
+													if (index === 0) return <></>;
+
+													let val = item[0];
+
+													if (val === "var") {
+														val = evalValue(val, "global", name)[0];
+													}
+
+													return <ListGroup.Item>{val}</ListGroup.Item>;
+												})}
+											</ListGroup>
+										</details>
 									</ListGroup.Item>
 								);
 							} else {
@@ -1143,6 +1171,27 @@ export default function Vars(props) {
 												onClick={selectVar(key, name)}
 											>
 												{`${name}: ${vars[key][name]}`}
+											</ListGroup.Item>
+										);
+									} else if (typeof vars[key][name][0] === "string") {
+										// list var
+										return (
+											<ListGroup.Item key={name}>
+												<h3>{name}</h3>
+												<details>
+													<summary>List</summary>
+													<ListGroup>
+														{vars[key][name].map((item) => {
+															let val = item;
+
+															if (val === "var") {
+																val = evalValue(val, key, name)[0];
+															}
+
+															return <ListGroup.Item>{val}</ListGroup.Item>;
+														})}
+													</ListGroup>
+												</details>
 											</ListGroup.Item>
 										);
 									} else {

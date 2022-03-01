@@ -186,8 +186,6 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 		}
 	}
 
-	console.log(vars, val, path);
-
 	if (path.length === 1) {
 		if (globalRoot) {
 			if (scope === "global" && name === path[0]) {
