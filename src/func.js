@@ -198,8 +198,11 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 
 			val = vars[path[0]];
 
-			if (typeof val !== "string" && !(val instanceof Array)) {
+			if (typeof val !== "string" && typeof val[0] !== "string") {
 				val = evaluateTable(val, vars, globalRoot, scope, name, depth)[0];
+			} else if (typeof val !== "string") {
+				// list
+				val = evaluateList(val, vars, globalRoot, scope, name, depth);
 			}
 		} else {
 			if (scope === "global" && name === path[0]) {
@@ -213,8 +216,19 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 
 				val = vars.global[path[0]];
 
-				if (typeof val !== "string" && !(val instanceof Array)) {
+				if (typeof val !== "string" && typeof val[0] !== "string") {
+					// table
 					val = evaluateTable(
+						val,
+						vars,
+						globalRoot,
+						"global",
+						path[0],
+						depth
+					)[0];
+				} else if (typeof val !== "string") {
+					// list
+					val = evaluateList(
 						val,
 						vars,
 						globalRoot,
@@ -239,8 +253,11 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 
 			val = vars[path[0]][path[1]];
 
-			if (typeof val !== "string" && !(val instanceof Array)) {
+			if (typeof val !== "string" && typeof val[0] !== "string") {
 				val = evaluateTable(val, vars, globalRoot, path[0], path[1], depth)[0];
+			} else if (typeof val !== "string") {
+				// list
+				val = evaluateList(val, vars, globalRoot, path[0], path[1], depth);
 			}
 		} else {
 			return "scope does not exist";
@@ -262,6 +279,24 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 	}
 
 	return val;
+}
+
+function evaluateList(list, vars, globalRoot, scope, name, depth) {
+	const output = list.map((item, index) => {
+		if (index === 0) {
+			return null;
+		}
+
+		if (item[1] === "var") {
+			return evaluateVal(item[0], vars, globalRoot, scope, name, depth);
+		}
+
+		return item[0];
+	});
+
+	output.splice(0, 1);
+
+	return output;
 }
 
 function getVar(path, vars, globalRoot) {

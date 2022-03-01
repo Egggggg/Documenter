@@ -28,6 +28,415 @@ const checkInvalidName = (name) => {
 	);
 };
 
+function addVar(
+	newScope,
+	newName,
+	scopes,
+	vars,
+	newValue,
+	db,
+	setVars,
+	setNewName,
+	setNewValue
+) {
+	return (e) => {
+		e.preventDefault();
+
+		let scope = newScope.trim(" ");
+		let name = newName.trim(" ");
+		let exists = false;
+
+		if (!name) {
+			NotificationManager.error(null, "Please enter a name");
+
+			return;
+		}
+
+		if (checkInvalidName(name)) {
+			NotificationManager.error(
+				null,
+				"Name cannot include '.', '/', ' ' (space), '{', or '}'"
+			);
+
+			return;
+		}
+
+		if (checkInvalidName(scope)) {
+			NotificationManager.error(
+				null,
+				"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
+			);
+
+			return;
+		}
+
+		if (!scope) {
+			scope = "global";
+		}
+
+		if (vars[scope]) {
+			exists = Object.keys(vars[scope]).indexOf(name) > -1;
+		}
+
+		if (scope === "global" && scopes.indexOf(name) > -1) {
+			NotificationManager.error(
+				null,
+				"There is already a scope with this name"
+			);
+
+			return;
+		}
+
+		if (
+			vars.global &&
+			(typeof vars.global[scope] === "string" ||
+				vars.global[scope] instanceof Array)
+		) {
+			NotificationManager.error(
+				null,
+				"There is a variable in the global scope with this scope name"
+			);
+
+			return;
+		}
+
+		if (exists) {
+			if (!newValue) {
+				db.find({ selector: { type: "var", scope, name } }).then((results) => {
+					db.remove(results.docs[0]);
+				});
+			} else {
+				db.find({ selector: { type: "var", scope, name } }).then((results) => {
+					db.put({
+						_id: results.docs[0]._id,
+						_rev: results.docs[0]._rev,
+						name,
+						value: newValue,
+						scope,
+						type: "var"
+					});
+				});
+			}
+		} else if (newValue !== "") {
+			db.post({
+				name,
+				value: newValue,
+				scope,
+				type: "var"
+			});
+		}
+
+		if (newValue) {
+			setVars({
+				...vars,
+				[scope]: { ...vars[scope], [name]: newValue }
+			});
+		} else if (exists) {
+			const newVars = { ...vars };
+			delete newVars[scope][name];
+
+			if (Object.keys(newVars[scope]).length === 0) {
+				delete newVars[scope];
+			}
+
+			setVars(newVars);
+		}
+
+		setNewName("");
+		setNewValue("");
+	};
+}
+
+function addTable(
+	newScope,
+	newName,
+	scopes,
+	tableData,
+	db,
+	vars,
+	setVars,
+	setNewName,
+	setNewScope,
+	setTableData
+) {
+	return (e) => {
+		e.preventDefault();
+
+		let scope = newScope.trim(" ");
+		let name = newName.trim(" ");
+		let exists = false;
+
+		if (!name) {
+			NotificationManager.error(null, "Please enter a name");
+
+			return;
+		}
+
+		if (checkInvalidName(name)) {
+			NotificationManager.error(
+				null,
+				"Name cannot include '.', '/', ' ' (space), '{', or '}'"
+			);
+
+			return;
+		}
+
+		if (checkInvalidName(scope)) {
+			NotificationManager.error(
+				null,
+				"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
+			);
+
+			return;
+		}
+
+		if (!tableData[0].value) {
+			NotificationManager.error(null, "Please enter a default value");
+
+			return;
+		}
+
+		if (!scope) {
+			scope = "global";
+		}
+
+		if (vars[scope]) {
+			exists = Object.keys(vars[scope]).indexOf(name) > -1;
+		}
+
+		if (scope === "global" && scopes.indexOf(name) > -1) {
+			NotificationManager.error(
+				null,
+				"There is already a scope with this name"
+			);
+
+			return;
+		}
+
+		// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
+		if (
+			vars.global &&
+			(typeof vars.global[scope] === "string" ||
+				vars.global[scope] instanceof Array)
+		) {
+			NotificationManager.error(
+				null,
+				"There is a variable in the global scope with this scope name"
+			);
+
+			return;
+		}
+
+		if (exists) {
+			db.find({ selector: { type: "var", scope, name } }).then((results) => {
+				db.put({
+					_id: results.docs[0]._id,
+					_rev: results.docs[0]._rev,
+					name,
+					value: tableData,
+					scope,
+					type: "var"
+				});
+			});
+		} else {
+			db.post({
+				name,
+				value: tableData,
+				scope,
+				type: "var"
+			});
+		}
+
+		setVars({
+			...vars,
+			[scope]: {
+				...vars[scope],
+				[name]: tableData
+			}
+		});
+
+		setNewName("");
+		setNewScope("");
+		setTableData(tableDefault);
+	};
+}
+
+function addList(
+	newScope,
+	newName,
+	vars,
+	scopes,
+	db,
+	listData,
+	setVars,
+	setNewName,
+	setNewScope,
+	setNewValue,
+	setListData
+) {
+	return (e) => {
+		e.preventDefault();
+
+		let scope = newScope.trim(" ");
+		let name = newName.trim(" ");
+		let exists = false;
+
+		if (!name) {
+			NotificationManager.error(null, "Please enter a name");
+
+			return;
+		}
+
+		if (checkInvalidName(name)) {
+			NotificationManager.error(
+				null,
+				"Name cannot include '.', '/', ' ' (space), '{', or '}'"
+			);
+
+			return;
+		}
+
+		if (checkInvalidName(scope)) {
+			NotificationManager.error(
+				null,
+				"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
+			);
+
+			return;
+		}
+
+		if (!scope) {
+			scope = "global";
+		}
+
+		if (vars[scope]) {
+			exists = Object.keys(vars[scope]).indexOf(name) > -1;
+		}
+
+		if (scope === "global" && scopes.indexOf(name) > -1) {
+			NotificationManager.error(
+				null,
+				"There is already a scope with this name"
+			);
+
+			return;
+		}
+
+		// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
+		if (
+			vars.global &&
+			(typeof vars.global[scope] === "string" ||
+				vars.global[scope] instanceof Array)
+		) {
+			NotificationManager.error(
+				null,
+				"There is a variable in the global scope with this scope name"
+			);
+
+			return;
+		}
+
+		if (exists) {
+			db.find({ selector: { type: "var", scope, name } }).then((results) => {
+				db.put({
+					_id: results.docs[0]._id,
+					_rev: results.docs[0]._rev,
+					name,
+					value: listData,
+					scope,
+					type: "var"
+				});
+			});
+		} else {
+			db.post({
+				name,
+				value: listData,
+				scope,
+				type: "var"
+			});
+		}
+
+		setVars({
+			...vars,
+			[scope]: {
+				...vars[scope],
+				[name]: listData
+			}
+		});
+
+		setNewName("");
+		setNewScope("");
+		setNewValue("");
+		setListData(["list"]);
+	};
+}
+
+function selectVar(
+	vars,
+	setType,
+	setNewName,
+	setNewScope,
+	setNewValue,
+	setListData,
+	setTableData
+) {
+	return (key, name) => () => {
+		if (typeof vars[key][name] === "string") {
+			setType("basic");
+			setNewName(name);
+			setNewScope(key === "global" ? "" : key);
+			setNewValue(vars[key][name]);
+		} else if (typeof vars[key][name][0] === "string") {
+			setType("list");
+			setNewName(name);
+			setNewScope(key === "global" ? "" : key);
+			setListData(JSON.parse(JSON.stringify(vars[key][name])));
+		} else {
+			setType("table");
+			setNewName(name);
+			setNewScope(key === "global" ? "" : key);
+			setTableData(JSON.parse(JSON.stringify(vars[key][name])));
+		}
+	};
+}
+
+function popover(setGuide) {
+	return (title, text, prev, next) => {
+		return (
+			<Popover style={{ maxWidth: "60%" }}>
+				<Popover.Header as="h3">{title}</Popover.Header>
+				<Popover.Body dangerouslySetInnerHTML={{ __html: text }}></Popover.Body>
+				<div className="text-end me-3 mb-3">
+					{prev && (
+						<Button className="me-3" onClick={() => setGuide(prev)}>
+							Previous
+						</Button>
+					)}
+					{next && <Button onClick={() => setGuide(next)}>Next</Button>}
+				</div>
+			</Popover>
+		);
+	};
+}
+
+const addRow = (setTableData, tableData) => {
+	setTableData([
+		...tableData,
+		[
+			{
+				type: "literal",
+				value: ""
+			},
+			{
+				val1Type: "var",
+				val1: "",
+				comparison: "eq",
+				val2Type: "literal",
+				val2: ""
+			}
+		]
+	]);
+};
 export default function Vars(props) {
 	const [vars, setVars] = useState({});
 	const [newName, setNewName] = useState("");
@@ -124,387 +533,6 @@ export default function Vars(props) {
 		}
 	}, [type]);
 
-	const addVar = (e) => {
-		e.preventDefault();
-
-		let scope = newScope.trim(" ");
-		let name = newName.trim(" ");
-		let exists = false;
-
-		if (!name) {
-			NotificationManager.error(null, "Please enter a name");
-
-			return;
-		}
-
-		if (checkInvalidName(name)) {
-			NotificationManager.error(
-				null,
-				"Name cannot include '.', '/', ' ' (space), '{', or '}'"
-			);
-
-			return;
-		}
-
-		if (checkInvalidName(scope)) {
-			NotificationManager.error(
-				null,
-				"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
-			);
-
-			return;
-		}
-
-		if (!scope) {
-			scope = "global";
-		}
-
-		if (vars[scope]) {
-			exists = Object.keys(vars[scope]).indexOf(name) > -1;
-		}
-
-		if (scope === "global" && scopes.indexOf(name) > -1) {
-			NotificationManager.error(
-				null,
-				"There is already a scope with this name"
-			);
-
-			return;
-		}
-
-		if (
-			vars.global &&
-			(typeof vars.global[scope] === "string" ||
-				vars.global[scope] instanceof Array)
-		) {
-			NotificationManager.error(
-				null,
-				"There is a variable in the global scope with this scope name"
-			);
-
-			return;
-		}
-
-		if (exists) {
-			if (!newValue) {
-				props.db
-					.find({ selector: { type: "var", scope, name } })
-					.then((results) => {
-						props.db.remove(results.docs[0]);
-					});
-			} else {
-				props.db
-					.find({ selector: { type: "var", scope, name } })
-					.then((results) => {
-						props.db.put({
-							_id: results.docs[0]._id,
-							_rev: results.docs[0]._rev,
-							name,
-							value: newValue,
-							scope,
-							type: "var"
-						});
-					});
-			}
-		} else if (newValue !== "") {
-			props.db.post({
-				name,
-				value: newValue,
-				scope,
-				type: "var"
-			});
-		}
-
-		if (newValue) {
-			setVars({
-				...vars,
-				[scope]: { ...vars[scope], [name]: newValue }
-			});
-		} else if (exists) {
-			const newVars = { ...vars };
-			delete newVars[scope][name];
-
-			if (Object.keys(newVars[scope]).length === 0) {
-				delete newVars[scope];
-			}
-
-			setVars(newVars);
-		}
-
-		setNewName("");
-		setNewValue("");
-	};
-
-	const addTable = (e) => {
-		e.preventDefault();
-
-		let scope = newScope.trim(" ");
-		let name = newName.trim(" ");
-		let exists = false;
-
-		if (!name) {
-			NotificationManager.error(null, "Please enter a name");
-
-			return;
-		}
-
-		if (checkInvalidName(name)) {
-			NotificationManager.error(
-				null,
-				"Name cannot include '.', '/', ' ' (space), '{', or '}'"
-			);
-
-			return;
-		}
-
-		if (checkInvalidName(scope)) {
-			NotificationManager.error(
-				null,
-				"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
-			);
-
-			return;
-		}
-
-		if (!tableData[0].value) {
-			NotificationManager.error(null, "Please enter a default value");
-
-			return;
-		}
-
-		if (!scope) {
-			scope = "global";
-		}
-
-		if (vars[scope]) {
-			exists = Object.keys(vars[scope]).indexOf(name) > -1;
-		}
-
-		if (scope === "global" && scopes.indexOf(name) > -1) {
-			NotificationManager.error(
-				null,
-				"There is already a scope with this name"
-			);
-
-			return;
-		}
-
-		// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
-		if (
-			vars.global &&
-			(typeof vars.global[scope] === "string" ||
-				vars.global[scope] instanceof Array)
-		) {
-			NotificationManager.error(
-				null,
-				"There is a variable in the global scope with this scope name"
-			);
-
-			return;
-		}
-
-		if (exists) {
-			props.db
-				.find({ selector: { type: "var", scope, name } })
-				.then((results) => {
-					props.db.put({
-						_id: results.docs[0]._id,
-						_rev: results.docs[0]._rev,
-						name,
-						value: tableData,
-						scope,
-						type: "var"
-					});
-				});
-		} else {
-			props.db.post({
-				name,
-				value: tableData,
-				scope,
-				type: "var"
-			});
-		}
-
-		setVars({
-			...vars,
-			[scope]: {
-				...vars[scope],
-				[name]: tableData
-			}
-		});
-
-		setNewName("");
-		setNewScope("");
-		setTableData(tableDefault);
-	};
-
-	const addList = (e) => {
-		e.preventDefault();
-
-		console.log(newName, newValue, listData);
-
-		let scope = newScope.trim(" ");
-		let name = newName.trim(" ");
-		let exists = false;
-
-		if (!name) {
-			NotificationManager.error(null, "Please enter a name");
-
-			return;
-		}
-
-		if (checkInvalidName(name)) {
-			NotificationManager.error(
-				null,
-				"Name cannot include '.', '/', ' ' (space), '{', or '}'"
-			);
-
-			return;
-		}
-
-		if (checkInvalidName(scope)) {
-			NotificationManager.error(
-				null,
-				"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
-			);
-
-			return;
-		}
-
-		if (!scope) {
-			scope = "global";
-		}
-
-		if (vars[scope]) {
-			exists = Object.keys(vars[scope]).indexOf(name) > -1;
-		}
-
-		if (scope === "global" && scopes.indexOf(name) > -1) {
-			NotificationManager.error(
-				null,
-				"There is already a scope with this name"
-			);
-
-			return;
-		}
-
-		// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
-		if (
-			vars.global &&
-			(typeof vars.global[scope] === "string" ||
-				vars.global[scope] instanceof Array)
-		) {
-			NotificationManager.error(
-				null,
-				"There is a variable in the global scope with this scope name"
-			);
-
-			return;
-		}
-
-		if (exists) {
-			props.db
-				.find({ selector: { type: "var", scope, name } })
-				.then((results) => {
-					props.db.put({
-						_id: results.docs[0]._id,
-						_rev: results.docs[0]._rev,
-						name,
-						value: listData,
-						scope,
-						type: "var"
-					});
-				});
-		} else {
-			props.db.post({
-				name,
-				value: listData,
-				scope,
-				type: "var"
-			});
-		}
-
-		setVars({
-			...vars,
-			[scope]: {
-				...vars[scope],
-				[name]: listData
-			}
-		});
-
-		setNewName("");
-		setNewScope("");
-		setNewValue("");
-		setListData(["list"]);
-	};
-
-	const newNameChange = (e) => {
-		setNewName(e.target.value);
-	};
-
-	const newValueChange = (e) => {
-		setNewValue(e.target.value);
-	};
-
-	const newScopeChange = (e) => {
-		setNewScope(e.target.value);
-	};
-
-	const selectVar = (key, name) => () => {
-		if (typeof vars[key][name] === "string") {
-			setType("basic");
-			setNewName(name);
-			setNewScope(key === "global" ? "" : key);
-			setNewValue(vars[key][name]);
-		} else if (typeof vars[key][name][0] === "string") {
-			setType("list");
-			setNewName(name);
-			setNewScope(key === "global" ? "" : key);
-			setListData(JSON.parse(JSON.stringify(vars[key][name])));
-		} else {
-			setType("table");
-			setNewName(name);
-			setNewScope(key === "global" ? "" : key);
-			setTableData(JSON.parse(JSON.stringify(vars[key][name])));
-		}
-	};
-
-	const popover = (title, text, prev, next) => {
-		return (
-			<Popover style={{ maxWidth: "60%" }}>
-				<Popover.Header as="h3">{title}</Popover.Header>
-				<Popover.Body dangerouslySetInnerHTML={{ __html: text }}></Popover.Body>
-				<div className="text-end me-3 mb-3">
-					{prev && (
-						<Button className="me-3" onClick={() => setGuide(prev)}>
-							Previous
-						</Button>
-					)}
-					{next && <Button onClick={() => setGuide(next)}>Next</Button>}
-				</div>
-			</Popover>
-		);
-	};
-
-	const addRow = () => {
-		setTableData([
-			...tableData,
-			[
-				{
-					type: "literal",
-					value: ""
-				},
-				{
-					val1Type: "var",
-					val1: "",
-					comparison: "eq",
-					val2Type: "literal",
-					val2: ""
-				}
-			]
-		]);
-	};
-
 	const addCondition = (index) => () => {
 		const copy = [...tableData];
 
@@ -558,7 +586,21 @@ export default function Vars(props) {
 
 		return (
 			<>
-				<h3 onClick={selectVar(scope, name)}>{name}</h3>
+				<h3
+					onClick={() =>
+						selectVar(
+							vars,
+							setType,
+							setNewName,
+							setNewScope,
+							setNewValue,
+							setListData,
+							setTableData
+						)(scope, name)
+					}
+				>
+					{name}
+				</h3>
 				<details>
 					<summary>Table</summary>
 					<Table bordered hover size="sm">
@@ -710,12 +752,19 @@ export default function Vars(props) {
 		);
 	};
 
+	const removeListItem = (index) => () => {
+		const output = [...listData];
+		output.splice(index, 1);
+
+		setListData(output);
+	};
+
 	return (
 		<Container>
 			{redirect && <Navigate to={redirect} />}
 			<OverlayTrigger
 				placement="bottom"
-				overlay={popover(
+				overlay={popover(setGuide)(
 					"Engine",
 					"This application uses the <a href='https://handlebarsjs.com/'>Handlebars</a> templating engine for inserting variables, and supports all of its features",
 					null,
@@ -730,15 +779,33 @@ export default function Vars(props) {
 					console.log(type);
 
 					if (type === "basic") {
-						addVar(e);
+						addVar(
+							newScope,
+							newName,
+							scopes,
+							vars,
+							newValue,
+							props.db,
+							setVars,
+							setNewName,
+							setNewValue
+						)(e);
 					} else if (type === "table") {
-						addTable(e);
+						addTable(
+							tableData,
+							props.db,
+							vars,
+							setVars,
+							setNewName,
+							setNewScope,
+							setTableData
+						)(e);
 					}
 				}}
 			>
 				<OverlayTrigger
 					placement="bottom"
-					overlay={popover(
+					overlay={popover(setGuide)(
 						"Variable Name",
 						"This is how you'll refer to your variable in the content of documents. Entering the name of an existing variable will edit that variable",
 						"v1",
@@ -750,7 +817,7 @@ export default function Vars(props) {
 						<Form.Label>Variable Name</Form.Label>
 						<Form.Control
 							value={newName}
-							onChange={newNameChange}
+							onChange={(e) => setNewName(e.target.value)}
 							type="text"
 							placeholder="Name"
 						/>
@@ -758,7 +825,7 @@ export default function Vars(props) {
 				</OverlayTrigger>
 				<OverlayTrigger
 					placement="bottom"
-					overlay={popover(
+					overlay={popover(setGuide)(
 						"Variable Scope",
 						"Variables can have the same name as long as they're in different scopes. Defaults to 'global'",
 						null,
@@ -770,7 +837,7 @@ export default function Vars(props) {
 						<Form.Label>Variable Scope</Form.Label>
 						<Form.Control
 							value={newScope}
-							onChange={newScopeChange}
+							onChange={(e) => setNewScope(e.target.value)}
 							type="text"
 							placeholder="Scope"
 						/>
@@ -809,7 +876,7 @@ export default function Vars(props) {
 				{type === "basic" && (
 					<OverlayTrigger
 						placement="bottom"
-						overlay={popover(
+						overlay={popover(setGuide)(
 							"Variable Value",
 							"This is what will be shown wherever the variable is used",
 							"v2",
@@ -821,7 +888,7 @@ export default function Vars(props) {
 							<Form.Label>Variable Value</Form.Label>
 							<Form.Control
 								value={newValue}
-								onChange={newValueChange}
+								onChange={(e) => setNewValue(e.target.value)}
 								type="text"
 								placeholder="Value"
 							/>
@@ -1071,16 +1138,24 @@ export default function Vars(props) {
 								if (index === 0) return <></>;
 
 								if (item[1] === "literal") {
-									return <ListGroup.Item>{item[0]}</ListGroup.Item>;
+									return (
+										<ListGroup.Item action onClick={removeListItem(index)}>
+											{item[0]}
+										</ListGroup.Item>
+									);
 								} else if (item[1] === "var") {
 									return (
-										<ListGroup.Item>
+										<ListGroup.Item action onClick={removeListItem(index)}>
 											{evalValue(item[0], newScope || "global", newName)[0]}
 										</ListGroup.Item>
 									);
 								}
 
-								return <ListGroup.Item>{item[0]} (invalid)</ListGroup.Item>;
+								return (
+									<ListGroup.Item action onClick={removeListItem(index)}>
+										{item[0]} (invalid)
+									</ListGroup.Item>
+								);
 							})}
 						</ListGroup>
 					</Form>
@@ -1092,7 +1167,7 @@ export default function Vars(props) {
 			)}
 			<OverlayTrigger
 				placement="top"
-				overlay={popover(
+				overlay={popover(setGuide)(
 					"Variable List",
 					"Here is where all the variables you add will show up. You can click one to edit it, and after that you can delete it by saving it with an empty value",
 					"v3",
@@ -1113,7 +1188,15 @@ export default function Vars(props) {
 									<ListGroup.Item
 										key={name}
 										action
-										onClick={selectVar("global", name)}
+										onClick={selectVar(
+											vars,
+											setType,
+											setNewName,
+											setNewScope,
+											setNewValue,
+											setListData,
+											setTableData
+										)("global", name)}
 									>
 										{`${name}: ${vars["global"][name]}`}
 									</ListGroup.Item>
@@ -1131,7 +1214,7 @@ export default function Vars(props) {
 
 													let val = item[0];
 
-													if (val === "var") {
+													if (item[1] === "var") {
 														val = evalValue(val, "global", name)[0];
 													}
 
@@ -1168,7 +1251,15 @@ export default function Vars(props) {
 											<ListGroup.Item
 												key={name}
 												action
-												onClick={selectVar(key, name)}
+												onClick={selectVar(
+													vars,
+													setType,
+													setNewName,
+													setNewScope,
+													setNewValue,
+													setListData,
+													setTableData
+												)(key, name)}
 											>
 												{`${name}: ${vars[key][name]}`}
 											</ListGroup.Item>
