@@ -6,7 +6,7 @@ const comparisons = {
 	lt: (arg1, arg2) => parseFloat(arg1) < parseFloat(arg2),
 	gt: (arg1, arg2) => parseFloat(arg1) > parseFloat(arg2),
 	isin: (arg1, arg2) => {
-		if (!(arg2 instanceof Array) || typeof arg2[0] !== "string") {
+		if (!arg2.varType || (arg2.varType && arg2.varType !== "list")) {
 			return false;
 		}
 
@@ -87,6 +87,7 @@ function evaluateIter(row, table, vars, globalRoot, scope, name, depth) {
 		if (evaluateRow(row, table, vars, globalRoot, scope, name, depth)) {
 			if (table[row][0].type === "var") {
 				let val = table[row][0].value;
+
 				if (typeof val === "string") {
 					const up = val.startsWith("../");
 
@@ -155,6 +156,9 @@ function evaluateRow(row, table, vars, globalRoot, scope, name, depth) {
 				throw err;
 			}
 		}
+
+		console.log(table, row, scope, name);
+		console.trace();
 
 		if (!comparisons[table[row][i].comparison](val1, val2)) {
 			return false;

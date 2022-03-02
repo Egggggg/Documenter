@@ -81,11 +81,7 @@ function addVar(
 		return;
 	}
 
-	if (
-		vars.global &&
-		(typeof vars.global[scope] === "string" ||
-			vars.global[scope] instanceof Array)
-	) {
+	if (vars.global && vars.global[scope]) {
 		NotificationManager.error(
 			null,
 			"There is a variable in the global scope with this scope name"
@@ -105,20 +101,22 @@ function addVar(
 					_id: results.docs[0]._id,
 					_rev: results.docs[0]._rev,
 					name,
-					value: newValue,
+					value: newValue.value,
 					scope,
 					type: "var",
-					varType: "basic"
+					varType: "basic",
+					basicType: newValue.type
 				});
 			});
 		}
 	} else if (newValue !== "") {
 		db.post({
 			name,
-			value: newValue,
+			value: newValue.value,
 			scope,
 			type: "var",
-			varType: "basic"
+			varType: "basic",
+			basicType: newValue.type
 		});
 	}
 
@@ -206,11 +204,7 @@ function addTable(
 	}
 
 	// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
-	if (
-		vars.global &&
-		(typeof vars.global[scope] === "string" ||
-			vars.global[scope] instanceof Array)
-	) {
+	if (vars.global && vars.global[scope]) {
 		NotificationManager.error(
 			null,
 			"There is a variable in the global scope with this scope name"
@@ -310,11 +304,7 @@ function addList(
 	}
 
 	// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
-	if (
-		vars.global &&
-		(typeof vars.global[scope] === "string" ||
-			vars.global[scope] instanceof Array)
-	) {
+	if (vars.global && vars.global[scope]) {
 		NotificationManager.error(
 			null,
 			"There is a variable in the global scope with this scope name"
@@ -367,24 +357,24 @@ function selectVar(
 	setNewValue,
 	setListData,
 	setTableData,
+	setNewValueType,
 	key,
 	name
 ) {
-	if (typeof vars[key][name] === "string") {
-		setType("basic");
-		setNewName(name);
-		setNewScope(key === "global" ? "" : key);
-		setNewValue(vars[key][name]);
-	} else if (typeof vars[key][name][0] === "string") {
-		setType("list");
-		setNewName(name);
-		setNewScope(key === "global" ? "" : key);
-		setListData(JSON.parse(JSON.stringify(vars[key][name])));
-	} else {
-		setType("table");
-		setNewName(name);
-		setNewScope(key === "global" ? "" : key);
-		setTableData(JSON.parse(JSON.stringify(vars[key][name])));
+	const item = vars[key][name];
+
+	setType(item.varType);
+	setNewScope(key === "global" ? "" : key);
+	setNewName(name);
+
+	if (item.type === "basic") {
+		setNewValue(item.value);
+		setNewValueType(item.basicType);
+	} else if (item.varType === "list") {
+		setNewValueType("literal");
+		setListData(JSON.parse(JSON.stringify(item)));
+	} else if (item.varType === "table") {
+		setTableData(JSON.parse(JSON.stringify(item)));
 	}
 }
 
@@ -450,9 +440,7 @@ const evalValue = (vars, val, scope, name) => {
 			return [val, val];
 		} else {
 			return [
-				`${val.value || val} (${
-					val instanceof Array && val[0] === "list" ? "LIST" : value
-				})`,
+				`${val.value || val} (${val.varType === "list" ? "LIST" : value})`,
 				value
 			];
 		}
@@ -703,7 +691,7 @@ export default function Vars(props) {
 	const [guide, setGuide] = useState(null);
 	const [redirect, setRedirect] = useState(null);
 	const [{ search }] = useState(useLocation());
-	const [newListItemType, setNewListItemType] = useState("literal");
+	const [newValueType, setNewValueType] = useState("literal");
 	const [listData, setListData] = useState(["list"]);
 	const [type, setType] = useState("basic");
 	const [tableData, setTableData] = useState(tableDefault);
@@ -741,7 +729,7 @@ export default function Vars(props) {
 						doc.scope = "global";
 					}
 
-					if (!doc.value.varType) {
+					if (!doc.varType) {
 						if (typeof doc.value === "string") {
 							props.db.put({ ...doc, varType: "basic", basicType: "literal" });
 						} else if (doc.value[0] === "list") {
@@ -755,13 +743,14 @@ export default function Vars(props) {
 
 					newVars[doc.scope] = {
 						...newVars[doc.scope],
-						[doc.name]: doc.value
+						[doc.name]: { value: doc.value, varType: doc.varType }
 					};
 
-					if (
-						typeof newVars[doc.scope][doc.name] !== "string" &&
-						!(newVars[doc.scope][doc.name] instanceof Array)
-					) {
+					if (doc.basicType) {
+						newVars[doc.scope][doc.name].basicType = doc.basicType;
+					}
+
+					if (newVars[doc.scope][doc.name].varType === "table") {
 						newVars[doc.scope][doc.name][0].scope = doc.scope;
 					}
 
@@ -769,6 +758,8 @@ export default function Vars(props) {
 						setScopes([...scopes, doc.scope]);
 					}
 				});
+
+				console.log(newVars);
 
 				setVars(newVars);
 			});
@@ -938,6 +929,28 @@ export default function Vars(props) {
 								type="text"
 								placeholder="Value"
 							/>
+							<ToggleButtonGroup
+								type="radio"
+								value={newValueType}
+								onChange={setNewValueType}
+								name="newValueType"
+								className="mb-3"
+							>
+								<ToggleButton
+									id="value-type-literal"
+									variant="outline-primary"
+									value="literal"
+								>
+									Literal
+								</ToggleButton>
+								<ToggleButton
+									id="value-type-var"
+									variant="outline-primary"
+									value="var"
+								>
+									Variable
+								</ToggleButton>
+							</ToggleButtonGroup>
 						</Form.Group>
 					</OverlayTrigger>
 				)}
@@ -1151,7 +1164,7 @@ export default function Vars(props) {
 							e.preventDefault();
 
 							const copy = [...listData];
-							copy.push([newValue, newListItemType]);
+							copy.push([newValue, newValueType]);
 
 							setListData(copy);
 							setNewValue("");
@@ -1170,8 +1183,8 @@ export default function Vars(props) {
 							/>
 							<ToggleButtonGroup
 								type="radio"
-								value={newListItemType}
-								onChange={setNewListItemType}
+								value={newValueType}
+								onChange={setNewValueType}
 								name="newListItemType"
 								className="mb-3"
 							>
@@ -1265,8 +1278,8 @@ export default function Vars(props) {
 				<Card>
 					<Card.Header>global</Card.Header>
 					<ListGroup>
-						{Object.keys(vars["global"]).map((name) => {
-							if (typeof vars["global"][name] === "string") {
+						{Object.keys(vars.global).map((name) => {
+							if (vars.global[name].varType === "basic") {
 								// basic var
 								return (
 									<ListGroup.Item
@@ -1291,7 +1304,7 @@ export default function Vars(props) {
 										}`}
 									</ListGroup.Item>
 								);
-							} else if (typeof vars.global[name][0] === "string") {
+							} else if (vars.global[name].varType === "list") {
 								// list var
 								return (
 									<ListGroup.Item key={name}>
@@ -1330,7 +1343,7 @@ export default function Vars(props) {
 										</details>
 									</ListGroup.Item>
 								);
-							} else {
+							} else if (vars.global[name].varType === "table") {
 								// table var
 								return (
 									<ListGroup.Item key={name}>
@@ -1349,6 +1362,8 @@ export default function Vars(props) {
 									</ListGroup.Item>
 								);
 							}
+
+							return <>Missing</>;
 						})}
 					</ListGroup>
 				</Card>
@@ -1362,7 +1377,7 @@ export default function Vars(props) {
 							<Card.Header>{key}</Card.Header>
 							<ListGroup>
 								{Object.keys(vars[key]).map((name) => {
-									if (typeof vars[key][name] === "string") {
+									if (vars[key][name].varType === "basic") {
 										// basic var
 										return (
 											<ListGroup.Item
@@ -1385,7 +1400,7 @@ export default function Vars(props) {
 												{`${name}: ${vars[key][name]}`}
 											</ListGroup.Item>
 										);
-									} else if (typeof vars[key][name][0] === "string") {
+									} else if (vars[key][name].varType === "list") {
 										// list var
 										return (
 											<ListGroup.Item key={name}>
@@ -1422,7 +1437,7 @@ export default function Vars(props) {
 												</details>
 											</ListGroup.Item>
 										);
-									} else {
+									} else if (vars[key][name].varType === "table") {
 										// table var
 										return (
 											<ListGroup.Item key={name}>
@@ -1441,6 +1456,8 @@ export default function Vars(props) {
 											</ListGroup.Item>
 										);
 									}
+
+									return <>Missing</>;
 								})}
 							</ListGroup>
 						</Card>
