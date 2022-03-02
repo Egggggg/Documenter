@@ -67,10 +67,18 @@ export function evaluateTable(table, vars, globalRoot, scope, name, depth) {
 	if (table[0].type === "literal") {
 		return [table[0].value, -1];
 	} else {
-		return [
-			evaluateVal(table[0].value, vars, globalRoot, scope, name, depth),
-			-1
-		];
+		try {
+			return [
+				evaluateVal(table[0].value, vars, globalRoot, scope, name, depth),
+				-1
+			];
+		} catch (err) {
+			if (err.message === "too much recursion") {
+				return [table[0].value, -1];
+			}
+
+			throw err;
+		}
 	}
 }
 
@@ -78,8 +86,8 @@ function evaluateIter(row, table, vars, globalRoot, scope, name, depth) {
 	try {
 		if (evaluateRow(row, table, vars, globalRoot, scope, name, depth)) {
 			if (table[row][0].type === "var") {
-				if (typeof table[row][0].value === "string") {
-					let val = table[row][0].value;
+				let val = table[row][0].value;
+				if (typeof val === "string") {
 					const up = val.startsWith("../");
 
 					if (up) {
@@ -113,18 +121,6 @@ function evaluateIter(row, table, vars, globalRoot, scope, name, depth) {
 						row
 					];
 				}
-
-				return [
-					evaluateVal(
-						table[row][0].value,
-						vars,
-						globalRoot,
-						scope,
-						name,
-						depth
-					),
-					row
-				];
 			}
 
 			return [table[row][0].value, row];

@@ -107,7 +107,8 @@ function addVar(
 					name,
 					value: newValue,
 					scope,
-					type: "var"
+					type: "var",
+					varType: "basic"
 				});
 			});
 		}
@@ -116,7 +117,8 @@ function addVar(
 			name,
 			value: newValue,
 			scope,
-			type: "var"
+			type: "var",
+			varType: "basic"
 		});
 	}
 
@@ -225,7 +227,8 @@ function addTable(
 				name,
 				value: tableData,
 				scope,
-				type: "var"
+				type: "var",
+				varType: "table"
 			});
 		});
 	} else {
@@ -233,7 +236,8 @@ function addTable(
 			name,
 			value: tableData,
 			scope,
-			type: "var"
+			type: "var",
+			varType: "table"
 		});
 	}
 
@@ -327,7 +331,8 @@ function addList(
 				name,
 				value: listData,
 				scope,
-				type: "var"
+				type: "var",
+				varType: "list"
 			});
 		});
 	} else {
@@ -335,7 +340,8 @@ function addList(
 			name,
 			value: listData,
 			scope,
-			type: "var"
+			type: "var",
+			varType: "list"
 		});
 	}
 
@@ -443,7 +449,12 @@ const evalValue = (vars, val, scope, name) => {
 		if (value === val) {
 			return [val, val];
 		} else {
-			return [`${val} (${value})`, value];
+			return [
+				`${val.value} (${
+					val instanceof Array && val[0] === "list" ? "LIST" : value
+				})`,
+				value
+			];
 		}
 	} catch (err) {
 		if (err.message === "too much recursion") {
@@ -482,6 +493,29 @@ const listTable = (
 		} else {
 			output = [output, output];
 		}
+	}
+
+	if (table.length === 1) {
+		return (
+			<ListGroup.Item
+				action
+				onClick={() =>
+					selectVar(
+						vars,
+						setType,
+						setNewName,
+						setNewScope,
+						setNewValue,
+						setListData,
+						setTableData,
+						scope,
+						name
+					)
+				}
+			>
+				{`${name}: ${output}`}
+			</ListGroup.Item>
+		);
 	}
 
 	return (
@@ -703,6 +737,18 @@ export default function Vars(props) {
 						doc.scope = "global";
 					}
 
+					if (!doc.varType) {
+						if (typeof doc.value === "string") {
+							props.db.put({ ...doc, varType: "basic", basicType: "literal" });
+						} else if (doc.value[0] === "list") {
+							doc.value = doc.value.filter((item) => item !== "list");
+
+							props.db.put({ ...doc, varType: "list" });
+						} else {
+							props.db.put({ ...doc, varType: "table" });
+						}
+					}
+
 					newVars[doc.scope] = {
 						...newVars[doc.scope],
 						[doc.name]: doc.value
@@ -802,7 +848,7 @@ export default function Vars(props) {
 				<OverlayTrigger
 					placement="bottom"
 					overlay={popover(setGuide)(
-						"Variable Name",
+						"Name",
 						"This is how you'll refer to your variable in the content of documents. Entering the name of an existing variable will edit that variable",
 						"v1",
 						"v3"
@@ -810,7 +856,7 @@ export default function Vars(props) {
 					show={guide === "v2"}
 				>
 					<Form.Group className="mb-3" controlId="formBasicVarName">
-						<Form.Label>Variable Name</Form.Label>
+						<Form.Label>Name</Form.Label>
 						<Form.Control
 							value={newName}
 							onChange={(e) => setNewName(e.target.value)}
@@ -822,7 +868,7 @@ export default function Vars(props) {
 				<OverlayTrigger
 					placement="bottom"
 					overlay={popover(setGuide)(
-						"Variable Scope",
+						"Scope",
 						"Variables can have the same name as long as they're in different scopes. Defaults to 'global'",
 						null,
 						"/create?guide=s2"
@@ -830,7 +876,7 @@ export default function Vars(props) {
 					show={guide === "s1"}
 				>
 					<Form.Group className="mb-3" controlId="formBasicVarScopes">
-						<Form.Label>Variable Scope</Form.Label>
+						<Form.Label>Scope</Form.Label>
 						<Form.Control
 							value={newScope}
 							onChange={(e) => setNewScope(e.target.value)}
@@ -839,7 +885,7 @@ export default function Vars(props) {
 						/>
 					</Form.Group>
 				</OverlayTrigger>
-				<Form.Label>Variable Type</Form.Label>
+				<Form.Label>Type</Form.Label>
 				<br />
 				<ToggleButtonGroup
 					type="radio"
@@ -873,7 +919,7 @@ export default function Vars(props) {
 					<OverlayTrigger
 						placement="bottom"
 						overlay={popover(setGuide)(
-							"Variable Value",
+							"Value",
 							"This is what will be shown wherever the variable is used",
 							"v2",
 							"v4"
@@ -881,7 +927,7 @@ export default function Vars(props) {
 						show={guide === "v3"}
 					>
 						<Form.Group className="mb-3" controlId="formBasicVarValue">
-							<Form.Label>Variable Value</Form.Label>
+							<Form.Label>Value</Form.Label>
 							<Form.Control
 								value={newValue}
 								onChange={(e) => setNewValue(e.target.value)}
@@ -1088,13 +1134,9 @@ export default function Vars(props) {
 					</>
 				)}
 				{type !== "list" && (
-					<>
-						<br />
-						<br />
-						<Button className="my-3" type="submit">
-							Add
-						</Button>
-					</>
+					<Button className="my-3" type="submit">
+						Add
+					</Button>
 				)}
 			</Form>
 			{type === "list" && (
