@@ -111,6 +111,21 @@ Handlebars.registerHelper("ceil", (arg) => {
 	return Math.ceil(parseFloat(arg));
 });
 
+Handlebars.registerHelper("in", (list, item) => {
+	console.log(list);
+
+	let output = [...list];
+
+	output.splice(0, 1);
+	output = list.map((e) => {
+		return e[0];
+	});
+
+	console.log(output, item);
+
+	return output.indexOf(item) > -1;
+});
+
 PouchDB.plugin(PouchDBFind);
 
 let db = new PouchDB("documents", { auto_compaction: true });

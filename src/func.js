@@ -4,7 +4,14 @@ const comparisons = {
 	// eslint-disable-next-line eqeqeq
 	eq: (arg1, arg2) => arg1 == arg2,
 	lt: (arg1, arg2) => parseFloat(arg1) < parseFloat(arg2),
-	gt: (arg1, arg2) => parseFloat(arg1) > parseFloat(arg2)
+	gt: (arg1, arg2) => parseFloat(arg1) > parseFloat(arg2),
+	isin: (arg1, arg2) => {
+		if (!(arg2 instanceof Array) || typeof arg2[0] !== "string") {
+			return false;
+		}
+
+		return arg2.indexOf(arg1) > -1;
+	}
 };
 
 const depthMax = 10;
@@ -271,11 +278,13 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 			tempVars = { ...tempVars, ...vars.global };
 		}
 
-		console.log(tempVars, val, scope);
-
-		return Handlebars.compile(
-			scope === "global" ? val : `{{#with ${scope}}}${val}{{/with}}`
-		)(tempVars);
+		try {
+			return Handlebars.compile(
+				scope === "global" ? val : `{{#with ${scope}}}${val}{{/with}}`
+			)(tempVars);
+		} catch (err) {
+			return err.message.replace(/\n/g, "<br />");
+		}
 	}
 
 	return val;

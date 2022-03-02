@@ -148,11 +148,15 @@ export default function SaveLoad(props) {
 					let text = doc.text;
 
 					if (saveOptions.readable && saveOptions.eval) {
-						text = Handlebars.compile(
-							!doc.scope
-								? doc.text
-								: `{{#with ${doc.scope}}}${doc.text}{{/with}}`
-						)(vars);
+						try {
+							text = Handlebars.compile(
+								!doc.scope
+									? doc.text
+									: `{{#with ${doc.scope}}}${doc.text}{{/with}}`
+							)(vars);
+						} catch (err) {
+							text = err.message.replace(/\n/g, "<br />");
+						}
 					}
 
 					if (saveOptions.readable) {

@@ -180,6 +180,9 @@ function addTable(
 		return;
 	}
 
+	console.trace();
+	console.log(tableData);
+
 	if (!tableData[0].value) {
 		NotificationManager.error(null, "Please enter a default value");
 
@@ -463,7 +466,7 @@ const listTable = (
 	setListData,
 	setTableData
 ) => {
-	const comparisons = { eq: "==", lt: "<", gt: ">" };
+	const comparisons = { eq: "==", lt: "<", gt: ">", isin: "in" };
 
 	let [output, outputIndex] = evaluateTable(table, vars, false, scope, name);
 
@@ -766,8 +769,6 @@ export default function Vars(props) {
 			</OverlayTrigger>
 			<Form
 				onSubmit={(e) => {
-					console.log(e);
-
 					e.preventDefault();
 
 					if (type === "basic") {
@@ -781,9 +782,12 @@ export default function Vars(props) {
 							setVars,
 							setNewName,
 							setNewValue
-						)(e);
+						);
 					} else if (type === "table") {
 						addTable(
+							newScope,
+							newName,
+							scopes,
 							tableData,
 							props.db,
 							vars,
@@ -791,7 +795,7 @@ export default function Vars(props) {
 							setNewName,
 							setNewScope,
 							setTableData
-						)(e);
+						);
 					}
 				}}
 			>
@@ -1020,6 +1024,13 @@ export default function Vars(props) {
 														>
 															{">"}
 														</ToggleButton>
+														<ToggleButton
+															id={`compare-in-${index}-${rowIndex}`}
+															variant="outline-primary"
+															value="isin"
+														>
+															in
+														</ToggleButton>
 													</ToggleButtonGroup>
 												</Form.Group>
 												{valEntry(
@@ -1137,37 +1148,35 @@ export default function Vars(props) {
 								Add Item
 							</Button>
 						</Form.Group>
-						<ListGroup>
-							<h2>Items</h2>
-							{listData.map((item, index) => {
-								if (index === 0) return <></>;
-
-								return (
-									<ListGroup.Item
-										action
-										onClick={() => {
-											const output = [...listData];
-											output.splice(index, 1);
-
-											setListData(output);
-										}}
-									>
-										{item[1] === "literal" && item[0]}
-										{item[1] === "var" &&
-											evalValue(
-												vars,
-												item[0],
-												newScope || "global",
-												newName
-											)[0]}
-										{item[1] !== "literal" &&
-											item[1] !== "var" &&
-											`${item[0]} (invalid)`}
-									</ListGroup.Item>
-								);
-							})}
-						</ListGroup>
 					</Form>
+					<ListGroup>
+						<h2>Items</h2>
+						{listData.map((item, index) => {
+							if (index === 0) return <></>;
+
+							return (
+								<ListGroup.Item
+									action
+									onClick={() => {
+										console.log(listData);
+
+										const output = listData.filter((_, i) => i !== index);
+										setListData(output);
+
+										console.log(output);
+									}}
+									key={index}
+								>
+									{item[1] === "literal" && item[0]}
+									{item[1] === "var" &&
+										evalValue(vars, item[0], newScope || "global", newName)[0]}
+									{item[1] !== "literal" &&
+										item[1] !== "var" &&
+										`${item[0]} (invalid)`}
+								</ListGroup.Item>
+							);
+						})}
+					</ListGroup>
 					<Button
 						className="my-3"
 						onClick={(e) => {
@@ -1216,17 +1225,19 @@ export default function Vars(props) {
 									<ListGroup.Item
 										key={name}
 										action
-										onClick={selectVar(
-											vars,
-											setType,
-											setNewName,
-											setNewScope,
-											setNewValue,
-											setListData,
-											setTableData,
-											"global",
-											name
-										)}
+										onClick={() =>
+											selectVar(
+												vars,
+												setType,
+												setNewName,
+												setNewScope,
+												setNewValue,
+												setListData,
+												setTableData,
+												"global",
+												name
+											)
+										}
 									>
 										{`${name}: ${vars["global"][name]}`}
 									</ListGroup.Item>
@@ -1235,7 +1246,23 @@ export default function Vars(props) {
 								// list var
 								return (
 									<ListGroup.Item key={name}>
-										<h3>{name}</h3>
+										<h3
+											onClick={() =>
+												selectVar(
+													vars,
+													setType,
+													setNewName,
+													setNewScope,
+													setNewValue,
+													setListData,
+													setTableData,
+													"global",
+													name
+												)
+											}
+										>
+											{name}
+										</h3>
 										<details>
 											<summary>List</summary>
 											<ListGroup>
@@ -1292,15 +1319,19 @@ export default function Vars(props) {
 											<ListGroup.Item
 												key={name}
 												action
-												onClick={selectVar(
-													vars,
-													setType,
-													setNewName,
-													setNewScope,
-													setNewValue,
-													setListData,
-													setTableData
-												)(key, name)}
+												onClick={() =>
+													selectVar(
+														vars,
+														setType,
+														setNewName,
+														setNewScope,
+														setNewValue,
+														setListData,
+														setTableData,
+														key,
+														name
+													)
+												}
 											>
 												{`${name}: ${vars[key][name]}`}
 											</ListGroup.Item>
@@ -1309,7 +1340,23 @@ export default function Vars(props) {
 										// list var
 										return (
 											<ListGroup.Item key={name}>
-												<h3>{name}</h3>
+												<h3
+													onClick={() =>
+														selectVar(
+															vars,
+															setType,
+															setNewName,
+															setNewScope,
+															setNewValue,
+															setListData,
+															setTableData,
+															key,
+															name
+														)
+													}
+												>
+													{name}
+												</h3>
 												<details>
 													<summary>List</summary>
 													<ListGroup>
