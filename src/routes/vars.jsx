@@ -737,7 +737,7 @@ export default function Vars(props) {
 						doc.scope = "global";
 					}
 
-					if (!doc.varType) {
+					if (!doc.value.varType) {
 						if (typeof doc.value === "string") {
 							props.db.put({ ...doc, varType: "basic", basicType: "literal" });
 						} else if (doc.value[0] === "list") {
