@@ -187,9 +187,7 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 			path.push(path[0]);
 			path[0] = scope;
 		}
-	}
 
-	if (path.length === 1) {
 		if (globalRoot) {
 			if (scope === "global" && name === path[0]) {
 				throw Error("too much recursion");
@@ -213,11 +211,13 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 			}
 
 			if (vars.global) {
-				if (!vars.global[path[0]]) {
+				console.log(vars, path);
+
+				if (!vars.global[path[1]]) {
 					return val;
 				}
 
-				val = vars.global[path[0]];
+				val = vars.global[path[1]];
 
 				if (typeof val !== "string" && typeof val[0] !== "string") {
 					// table
@@ -226,7 +226,7 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 						vars,
 						globalRoot,
 						"global",
-						path[0],
+						path[1],
 						depth
 					)[0];
 				} else if (typeof val !== "string") {
@@ -236,7 +236,7 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 						vars,
 						globalRoot,
 						"global",
-						path[0],
+						path[1],
 						depth
 					)[0];
 				}

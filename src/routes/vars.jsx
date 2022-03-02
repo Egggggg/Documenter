@@ -450,7 +450,7 @@ const evalValue = (vars, val, scope, name) => {
 			return [val, val];
 		} else {
 			return [
-				`${val.value} (${
+				`${val.value || val} (${
 					val instanceof Array && val[0] === "list" ? "LIST" : value
 				})`,
 				value
@@ -480,6 +480,8 @@ const listTable = (
 	const comparisons = { eq: "==", lt: "<", gt: ">", isin: "in" };
 
 	let [output, outputIndex] = evaluateTable(table, vars, false, scope, name);
+
+	console.log(output);
 
 	if (outputIndex === -1) {
 		if (table[0].type === "var") {
@@ -513,10 +515,12 @@ const listTable = (
 					)
 				}
 			>
-				{`${name}: ${output}`}
+				{`${name}: ${evalValue(vars, output[0], scope, name)[0]}`}
 			</ListGroup.Item>
 		);
 	}
+
+	console.log(table);
 
 	return (
 		<>
@@ -1131,6 +1135,7 @@ export default function Vars(props) {
 								</Card>
 							);
 						})}
+						<br />
 					</>
 				)}
 				{type !== "list" && (
@@ -1281,7 +1286,9 @@ export default function Vars(props) {
 											)
 										}
 									>
-										{`${name}: ${vars["global"][name]}`}
+										{`${name}: ${
+											evalValue(vars, vars.global[name], "global", name)[0]
+										}`}
 									</ListGroup.Item>
 								);
 							} else if (typeof vars.global[name][0] === "string") {
