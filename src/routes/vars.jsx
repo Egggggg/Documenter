@@ -14,11 +14,6 @@ import ToggleButton from "react-bootstrap/ToggleButton";
 import ToggleButtonGroup from "react-bootstrap/ToggleButtonGroup";
 import { evaluateTable, evaluateVal } from "../func";
 
-const basicDefault = {
-	type: "literal",
-	value: ""
-};
-
 const tableDefault = [
 	{ type: "literal", value: "", priority: "last", scope: "global" }
 ];
@@ -86,7 +81,11 @@ function addVar(
 		return;
 	}
 
-	if (vars.global && vars.global[scope]) {
+	if (
+		vars.global &&
+		(typeof vars.global[scope] === "string" ||
+			vars.global[scope] instanceof Array)
+	) {
 		NotificationManager.error(
 			null,
 			"There is a variable in the global scope with this scope name"
@@ -138,7 +137,7 @@ function addVar(
 	}
 
 	setNewName("");
-	setNewValue({ ...basicDefault });
+	setNewValue("");
 }
 
 function addTable(
@@ -181,6 +180,9 @@ function addTable(
 		return;
 	}
 
+	console.trace();
+	console.log(tableData);
+
 	if (!tableData[0].value) {
 		NotificationManager.error(null, "Please enter a default value");
 
@@ -202,7 +204,11 @@ function addTable(
 	}
 
 	// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
-	if (vars.global && vars.global[scope]) {
+	if (
+		vars.global &&
+		(typeof vars.global[scope] === "string" ||
+			vars.global[scope] instanceof Array)
+	) {
 		NotificationManager.error(
 			null,
 			"There is a variable in the global scope with this scope name"
@@ -241,7 +247,7 @@ function addTable(
 
 	setNewName("");
 	setNewScope("");
-	setTableData([...tableDefault]);
+	setTableData(tableDefault);
 }
 
 function addList(
@@ -300,7 +306,11 @@ function addList(
 	}
 
 	// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
-	if (vars.global && vars.global[scope]) {
+	if (
+		vars.global &&
+		(typeof vars.global[scope] === "string" ||
+			vars.global[scope] instanceof Array)
+	) {
 		NotificationManager.error(
 			null,
 			"There is a variable in the global scope with this scope name"
@@ -339,7 +349,7 @@ function addList(
 
 	setNewName("");
 	setNewScope("");
-	setNewValue({ ...basicDefault });
+	setNewValue("");
 	setListData(["list"]);
 }
 
@@ -354,12 +364,12 @@ function selectVar(
 	key,
 	name
 ) {
-	if (!(vars[key][name] instanceof Array)) {
+	if (typeof vars[key][name] === "string") {
 		setType("basic");
 		setNewName(name);
 		setNewScope(key === "global" ? "" : key);
-		setNewValue({ ...vars[key][name] });
-	} else if (vars[key][name][0] === "list") {
+		setNewValue(vars[key][name]);
+	} else if (typeof vars[key][name][0] === "string") {
 		setType("list");
 		setNewName(name);
 		setNewScope(key === "global" ? "" : key);
@@ -428,19 +438,12 @@ function addCondition(tableData, index, setTableData) {
 
 const evalValue = (vars, val, scope, name) => {
 	try {
-		console.log(val);
-
 		let value = evaluateVal(val, vars, false, scope, name);
 
 		if (value === val) {
 			return [val, val];
 		} else {
-			return [
-				`${val.value} (${
-					val instanceof Array && val[0] === "list" ? "LIST" : value
-				})`,
-				value
-			];
+			return [`${val} (${value})`, value];
 		}
 	} catch (err) {
 		if (err.message === "too much recursion") {
@@ -479,29 +482,6 @@ const listTable = (
 		} else {
 			output = [output, output];
 		}
-	}
-
-	if (table.length === 1) {
-		return (
-			<ListGroup.Item
-				action
-				onClick={() =>
-					selectVar(
-						vars,
-						setType,
-						setNewName,
-						setNewScope,
-						setNewValue,
-						setListData,
-						setTableData,
-						scope,
-						name
-					)
-				}
-			>
-				{`${name}: ${output}`}
-			</ListGroup.Item>
-		);
 	}
 
 	return (
@@ -679,7 +659,7 @@ const valEntry = (
 export default function Vars(props) {
 	const [vars, setVars] = useState({});
 	const [newName, setNewName] = useState("");
-	const [newValue, setNewValue] = useState({ ...basicDefault });
+	const [newValue, setNewValue] = useState("");
 	const [newScope, setNewScope] = useState("");
 	const [scopes, setScopes] = useState([]);
 	const [guide, setGuide] = useState(null);
@@ -688,7 +668,7 @@ export default function Vars(props) {
 	const [newListItemType, setNewListItemType] = useState("literal");
 	const [listData, setListData] = useState(["list"]);
 	const [type, setType] = useState("basic");
-	const [tableData, setTableData] = useState([...tableDefault]);
+	const [tableData, setTableData] = useState(tableDefault);
 
 	useEffect(() => {
 		const params = new URLSearchParams(search);
@@ -708,8 +688,6 @@ export default function Vars(props) {
 		props.db
 			.find({ include_docs: true, selector: { type: "var" } })
 			.then((results) => {
-				console.log(results);
-
 				const newVars = {};
 
 				results.docs.forEach((doc) => {
@@ -730,9 +708,8 @@ export default function Vars(props) {
 						[doc.name]: doc.value
 					};
 
-					// not just another document
 					if (
-						typeof newVars[doc.scope][doc.name].value !== "string" &&
+						typeof newVars[doc.scope][doc.name] !== "string" &&
 						!(newVars[doc.scope][doc.name] instanceof Array)
 					) {
 						newVars[doc.scope][doc.name][0].scope = doc.scope;
@@ -764,14 +741,14 @@ export default function Vars(props) {
 
 	useEffect(() => {
 		if (type === "basic") {
-			setTableData([...tableDefault]);
+			setTableData(tableDefault);
 			setListData(["list"]);
 		} else if (type === "table") {
-			setNewValue({ ...basicDefault });
+			setNewValue("");
 			setListData(["list"]);
 		} else if (type === "list") {
-			setNewValue({ ...basicDefault });
-			setTableData([...tableDefault]);
+			setNewValue("");
+			setTableData(tableDefault);
 		}
 	}, [type]);
 
@@ -833,7 +810,7 @@ export default function Vars(props) {
 					show={guide === "v2"}
 				>
 					<Form.Group className="mb-3" controlId="formBasicVarName">
-						<Form.Label>Name</Form.Label>
+						<Form.Label>Variable Name</Form.Label>
 						<Form.Control
 							value={newName}
 							onChange={(e) => setNewName(e.target.value)}
@@ -853,7 +830,7 @@ export default function Vars(props) {
 					show={guide === "s1"}
 				>
 					<Form.Group className="mb-3" controlId="formBasicVarScopes">
-						<Form.Label>Scope</Form.Label>
+						<Form.Label>Variable Scope</Form.Label>
 						<Form.Control
 							value={newScope}
 							onChange={(e) => setNewScope(e.target.value)}
@@ -862,7 +839,7 @@ export default function Vars(props) {
 						/>
 					</Form.Group>
 				</OverlayTrigger>
-				<Form.Label>Type</Form.Label>
+				<Form.Label>Variable Type</Form.Label>
 				<br />
 				<ToggleButtonGroup
 					type="radio"
@@ -904,40 +881,13 @@ export default function Vars(props) {
 						show={guide === "v3"}
 					>
 						<Form.Group className="mb-3" controlId="formBasicVarValue">
-							<Form.Label>Value</Form.Label>
+							<Form.Label>Variable Value</Form.Label>
 							<Form.Control
-								value={newValue.value}
-								onChange={(e) => {
-									const copy = { ...newValue };
-									copy.value = e.target.value;
-
-									setNewValue(copy);
-								}}
+								value={newValue}
+								onChange={(e) => setNewValue(e.target.value)}
 								type="text"
 								placeholder="Value"
 							/>
-							<ToggleButtonGroup
-								type="radio"
-								value={newListItemType}
-								onChange={setNewListItemType}
-								name="newListItemType"
-								className="mb-3"
-							>
-								<ToggleButton
-									id="list-item-type-literal"
-									variant="outline-primary"
-									value="literal"
-								>
-									Literal
-								</ToggleButton>
-								<ToggleButton
-									id="list-item-type-var"
-									variant="outline-primary"
-									value="var"
-								>
-									Variable
-								</ToggleButton>
-							</ToggleButtonGroup>
 						</Form.Group>
 					</OverlayTrigger>
 				)}
@@ -1157,18 +1107,16 @@ export default function Vars(props) {
 							copy.push([newValue, newListItemType]);
 
 							setListData(copy);
-							setNewValue({ ...basicDefault });
+							setNewValue("");
 						}}
 					>
 						<Form.Group controlId="newListItem">
 							<Form.Label>New Item</Form.Label>
 							<Form.Control
-								value={newValue.value}
+								value={newValue}
 								onChange={(e) => {
-									const copy = { ...newValue };
-									copy.value = e.target.value;
-
-									setNewValue(copy);
+									console.log(e.target.value);
+									setNewValue(e.target.value);
 								}}
 								type="text"
 								placeholder="Value"
@@ -1270,8 +1218,8 @@ export default function Vars(props) {
 				<Card>
 					<Card.Header>global</Card.Header>
 					<ListGroup>
-						{Object.keys(vars.global).map((name) => {
-							if (!(vars.global[name] instanceof Array)) {
+						{Object.keys(vars["global"]).map((name) => {
+							if (typeof vars["global"][name] === "string") {
 								// basic var
 								return (
 									<ListGroup.Item
@@ -1294,7 +1242,7 @@ export default function Vars(props) {
 										{`${name}: ${vars["global"][name]}`}
 									</ListGroup.Item>
 								);
-							} else if (!(vars.global[name][0] instanceof Array)) {
+							} else if (typeof vars.global[name][0] === "string") {
 								// list var
 								return (
 									<ListGroup.Item key={name}>
@@ -1365,7 +1313,7 @@ export default function Vars(props) {
 							<Card.Header>{key}</Card.Header>
 							<ListGroup>
 								{Object.keys(vars[key]).map((name) => {
-									if (!(vars[key][name] instanceof Array)) {
+									if (typeof vars[key][name] === "string") {
 										// basic var
 										return (
 											<ListGroup.Item
@@ -1385,10 +1333,10 @@ export default function Vars(props) {
 													)
 												}
 											>
-												{`${name}: ${vars[key][name].value}`}
+												{`${name}: ${vars[key][name]}`}
 											</ListGroup.Item>
 										);
-									} else if (!(vars[key][name][0] instanceof Array)) {
+									} else if (typeof vars[key][name][0] === "string") {
 										// list var
 										return (
 											<ListGroup.Item key={name}>

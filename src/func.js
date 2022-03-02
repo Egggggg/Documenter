@@ -6,8 +6,7 @@ const comparisons = {
 	lt: (arg1, arg2) => parseFloat(arg1) < parseFloat(arg2),
 	gt: (arg1, arg2) => parseFloat(arg1) > parseFloat(arg2),
 	isin: (arg1, arg2) => {
-		// basic variables are objects, table variables first element is an object
-		if (!(arg2.value instanceof Array) || arg2[0] !== "list") {
+		if (!(arg2 instanceof Array) || typeof arg2[0] !== "string") {
 			return false;
 		}
 
@@ -68,18 +67,10 @@ export function evaluateTable(table, vars, globalRoot, scope, name, depth) {
 	if (table[0].type === "literal") {
 		return [table[0].value, -1];
 	} else {
-		try {
-			return [
-				evaluateVal(table[0].value, vars, globalRoot, scope, name, depth),
-				-1
-			];
-		} catch (err) {
-			if (err.message === "too much recursion") {
-				return [table[0].value, -1];
-			}
-
-			throw err;
-		}
+		return [
+			evaluateVal(table[0].value, vars, globalRoot, scope, name, depth),
+			-1
+		];
 	}
 }
 
@@ -87,9 +78,8 @@ function evaluateIter(row, table, vars, globalRoot, scope, name, depth) {
 	try {
 		if (evaluateRow(row, table, vars, globalRoot, scope, name, depth)) {
 			if (table[row][0].type === "var") {
-				let val = table[row][0].value;
-				// basic variable
-				if (!(val instanceof Array)) {
+				if (typeof table[row][0].value === "string") {
+					let val = table[row][0].value;
 					const up = val.startsWith("../");
 
 					if (up) {
@@ -112,7 +102,7 @@ function evaluateIter(row, table, vars, globalRoot, scope, name, depth) {
 
 					val = getVar(path, vars, globalRoot);
 
-					if (!(val instanceof Array)) {
+					if (typeof val === "string") {
 						return [val, row];
 					} else if (!val) {
 						return [null, null];
@@ -123,6 +113,18 @@ function evaluateIter(row, table, vars, globalRoot, scope, name, depth) {
 						row
 					];
 				}
+
+				return [
+					evaluateVal(
+						table[row][0].value,
+						vars,
+						globalRoot,
+						scope,
+						name,
+						depth
+					),
+					row
+				];
 			}
 
 			return [table[row][0].value, row];
@@ -203,9 +205,9 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 
 			val = vars[path[0]];
 
-			if (val instanceof Array && val[0] !== "list") {
+			if (typeof val !== "string" && typeof val[0] !== "string") {
 				val = evaluateTable(val, vars, globalRoot, scope, name, depth)[0];
-			} else if (val instanceof Array) {
+			} else if (typeof val !== "string") {
 				// list
 				val = evaluateList(val, vars, globalRoot, scope, name, depth);
 			}
@@ -221,7 +223,7 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 
 				val = vars.global[path[0]];
 
-				if (val instanceof Array && val[0] !== "list") {
+				if (typeof val !== "string" && typeof val[0] !== "string") {
 					// table
 					val = evaluateTable(
 						val,
@@ -231,7 +233,7 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 						path[0],
 						depth
 					)[0];
-				} else if (val instanceof Array) {
+				} else if (typeof val !== "string") {
 					// list
 					val = evaluateList(
 						val,
@@ -258,9 +260,9 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 
 			val = vars[path[0]][path[1]];
 
-			if (val instanceof Array && val[0] !== "list") {
+			if (typeof val !== "string" && typeof val[0] !== "string") {
 				val = evaluateTable(val, vars, globalRoot, path[0], path[1], depth)[0];
-			} else if (val instanceof Array) {
+			} else if (typeof val !== "string") {
 				// list
 				val = evaluateList(val, vars, globalRoot, path[0], path[1], depth);
 			}
@@ -278,7 +280,7 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 
 		try {
 			return Handlebars.compile(
-				scope === "global" ? val : `{{#with ${scope}}}${val.value}{{/with}}`
+				scope === "global" ? val : `{{#with ${scope}}}${val}{{/with}}`
 			)(tempVars);
 		} catch (err) {
 			return err.message.replace(/\n/g, "<br />");

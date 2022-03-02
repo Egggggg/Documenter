@@ -154,22 +154,6 @@ db.createIndex({
 		})
 	);
 
-db.find({ selector: { type: "var" } }).then((results) => {
-	results.docs.forEach((doc) => {
-		if (typeof doc.value === "string") {
-			db.put({
-				_id: doc._id,
-				_rev: doc._rev,
-				name: doc.name,
-				value: {
-					value: doc.value,
-					type: "literal"
-				}
-			});
-		}
-	});
-});
-
 ReactDOM.render(
 	<React.StrictMode>
 		<HashRouter>

@@ -104,7 +104,7 @@ export default function SaveLoad(props) {
 						const current = vars[key];
 
 						// basic variables
-						if (!(current instanceof Array)) {
+						if (typeof current === "string") {
 							return;
 						}
 
@@ -125,7 +125,7 @@ export default function SaveLoad(props) {
 						Object.keys(current).forEach((item) => {
 							const currentItem = current[item];
 
-							if (!(currentItem instanceof Array)) {
+							if (typeof currentItem === "string") {
 								return;
 							}
 
