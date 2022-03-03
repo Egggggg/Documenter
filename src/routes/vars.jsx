@@ -180,9 +180,6 @@ function addTable(
 		return;
 	}
 
-	console.trace();
-	console.log(tableData);
-
 	if (!tableData[0].value) {
 		NotificationManager.error(null, "Please enter a default value");
 
@@ -434,13 +431,17 @@ function addCondition(tableData, index, setTableData) {
 
 const evalValue = (vars, val, scope, name) => {
 	try {
-		let value = evaluateVal(val, vars, false, scope, name);
-
-		if (value === val) {
+		if (!val.varType) {
 			return [val, val];
+		}
+
+		let value = evaluateVal(val, vars, false, scope, name, 0);
+
+		if (value === val.value) {
+			return [value, value];
 		} else {
 			return [
-				`${val.value || val} (${val.varType === "list" ? "LIST" : value})`,
+				`${val.value} (${val.varType === "list" ? "LIST" : value})`,
 				value
 			];
 		}
@@ -468,8 +469,6 @@ const listTable = (
 	const comparisons = { eq: "==", lt: "<", gt: ">", isin: "in" };
 
 	let [output, outputIndex] = evaluateTable(table, vars, false, scope, name);
-
-	console.log(output);
 
 	if (outputIndex === -1) {
 		if (table[0].type === "var") {
@@ -507,8 +506,6 @@ const listTable = (
 			</ListGroup.Item>
 		);
 	}
-
-	console.log(table);
 
 	return (
 		<>
@@ -725,9 +722,11 @@ export default function Vars(props) {
 			.then((results) => {
 				const newVars = {};
 
-				results.docs.forEach((doc) => {
+				results.docs.forEach(async (doc) => {
+					const newDoc = { ...doc };
+
 					if (!doc.name) {
-						props.db.put({ ...doc, name: doc._id });
+						newDoc.name = doc._id;
 
 						doc.name = doc._id;
 					}
@@ -739,22 +738,14 @@ export default function Vars(props) {
 					}
 
 					if (!doc.varType) {
-						console.log(doc);
-
 						if (typeof doc.value === "string") {
 							doc.basicType = "literal";
 							doc.varType = "basic";
-
-							props.db.put({ ...doc, varType: "basic", basicType: "literal" });
 						} else if (doc.value[0] === "list") {
 							doc.value = doc.value.filter((item) => item !== "list");
 							doc.varType = "list";
-
-							props.db.put({ ...doc, varType: "list" });
 						} else {
 							doc.varType = "table";
-
-							props.db.put({ ...doc, varType: "table" });
 						}
 					}
 
@@ -771,10 +762,12 @@ export default function Vars(props) {
 						newVars[doc.scope][doc.name].value[0].scope = doc.scope;
 					}
 
+					await props.db.put(newDoc);
+
 					perhapsAddScope(doc.scope);
 				});
 
-				setVars(newVars);
+				setVars({ ...newVars });
 			});
 	}, [props.db, perhapsAddScope, guide, search]);
 
@@ -1064,7 +1057,7 @@ export default function Vars(props) {
 													"val1Type"
 												)}
 												<Form.Group className="w-25 float-start text-center">
-													<Form.Label>Comparison Type</Form.Label>
+													<Form.Label>Comparison</Form.Label>
 													<br />
 													<ToggleButtonGroup
 														type="radio"
@@ -1188,7 +1181,6 @@ export default function Vars(props) {
 							<Form.Control
 								value={newValue}
 								onChange={(e) => {
-									console.log(e.target.value);
 									setNewValue(e.target.value);
 								}}
 								type="text"
@@ -1225,18 +1217,12 @@ export default function Vars(props) {
 					<ListGroup>
 						<h2>Items</h2>
 						{listData.map((item, index) => {
-							if (index === 0) return <></>;
-
 							return (
 								<ListGroup.Item
 									action
 									onClick={() => {
-										console.log(listData);
-
 										const output = listData.filter((_, i) => i !== index);
 										setListData(output);
-
-										console.log(output);
 									}}
 									key={index}
 								>
@@ -1364,7 +1350,7 @@ export default function Vars(props) {
 											vars,
 											"global",
 											name,
-											vars["global"][name],
+											vars.global[name].value,
 											setType,
 											setNewName,
 											setNewScope,

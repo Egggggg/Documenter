@@ -102,8 +102,6 @@ export default function List(props) {
 				});
 
 				setVars(newVars);
-
-				console.log(newVars);
 			});
 	}, [props.db]);
 

@@ -68,10 +68,7 @@ export function evaluateTable(table, vars, globalRoot, scope, name, depth) {
 		return [table[0].value, -1];
 	} else {
 		try {
-			return [
-				evaluateVal(table[0].value, vars, globalRoot, scope, name, depth),
-				-1
-			];
+			return [evaluateVal(table[0], vars, globalRoot, scope, name, depth), -1];
 		} catch (err) {
 			if (err.message === "too much recursion") {
 				return [table[0].value, -1];
@@ -157,9 +154,6 @@ function evaluateRow(row, table, vars, globalRoot, scope, name, depth) {
 			}
 		}
 
-		console.log(table, row, scope, name);
-		console.trace();
-
 		if (!comparisons[table[row][i].comparison](val1, val2)) {
 			return false;
 		}
@@ -168,7 +162,11 @@ function evaluateRow(row, table, vars, globalRoot, scope, name, depth) {
 	return true;
 }
 
-export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
+export function evaluateVal(item, vars, globalRoot, scope, name, depth) {
+	let val = item.value || item;
+
+	console.log();
+
 	const up = val.startsWith("../");
 
 	if (up) {
@@ -179,6 +177,10 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 
 	if (!val.startsWith("{{") && !val.endsWith("}}")) {
 		path = val.split(".");
+
+		if (item.varType === "basic" && item.basicType === "literal") {
+			return val;
+		}
 	}
 
 	if (path.length === 1) {
@@ -210,20 +212,18 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 				val = evaluateList(val, vars, globalRoot, scope, name, depth);
 			}
 		} else {
-			if (scope === "global" && name === path[0]) {
+			if (scope === path[0] && name === path[1]) {
 				throw Error("too much recursion");
 			}
 
 			if (vars.global) {
-				console.log(vars, path);
-
 				if (!vars.global[path[1]]) {
 					return val;
 				}
 
 				val = vars.global[path[1]];
 
-				if (typeof val !== "string" && typeof val[0] !== "string") {
+				if (item.varType === "table") {
 					// table
 					val = evaluateTable(
 						val,
@@ -233,7 +233,7 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 						path[1],
 						depth
 					)[0];
-				} else if (typeof val !== "string") {
+				} else if (item.varType === "list") {
 					// list
 					val = evaluateList(
 						val,
@@ -244,6 +244,8 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 						depth
 					)[0];
 				}
+			} else if (item.varType === "basic" && item.basicType === "var") {
+				val = evaluateVal(val, vars, globalRoot, scope, name, depth);
 			} else {
 				return "scope does not exist";
 			}
@@ -270,7 +272,7 @@ export function evaluateVal(val, vars, globalRoot, scope, name, depth) {
 			return "scope does not exist";
 		}
 	} else {
-		let tempVars = { ...vars };
+		let tempVars = { ...vars.map((current) => current.value) };
 
 		if (!globalRoot) {
 			delete tempVars.global;

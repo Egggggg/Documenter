@@ -56,8 +56,6 @@ export default function Creator(props) {
 				});
 
 				results.docs.forEach((doc) => {
-					console.log(doc);
-
 					if (
 						typeof doc.value !== "string" &&
 						typeof doc.value[0] !== "string"
@@ -73,11 +71,7 @@ export default function Creator(props) {
 									doc.name
 								)[0]
 							};
-
-							console.log(newVars[doc.name]);
 						} else {
-							console.log(doc.scope, doc.name, doc.value, newVars);
-
 							newVars[doc.scope] = {
 								...newVars[doc.scope],
 								[doc.name]: evaluateTable(
@@ -88,8 +82,6 @@ export default function Creator(props) {
 									doc.name
 								)[0]
 							};
-
-							console.log(newVars[doc.scope][doc.name]);
 						}
 					}
 				});

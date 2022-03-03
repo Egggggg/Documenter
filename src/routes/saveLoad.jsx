@@ -71,12 +71,16 @@ export default function SaveLoad(props) {
 
 					if (saveOptions.manifest) {
 						manifest[doc._id] = {
-							_id: doc._id,
 							name: doc.name,
 							value: doc.value,
 							scope: doc.scope,
-							type: "var"
+							type: "var",
+							varType: doc.varType
 						};
+
+						if (doc.varType === "basic") {
+							manifest[doc._id].basicType = doc.basicType;
+						}
 					}
 				});
 
@@ -128,8 +132,6 @@ export default function SaveLoad(props) {
 							if (typeof currentItem === "string") {
 								return;
 							}
-
-							console.log(currentItem, vars, key, item);
 
 							evaluatedVars[key][item] = evaluateTable(
 								currentItem,

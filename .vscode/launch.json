@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+		{
+			"name": "Launch localhost",
+			"type": "firefox",
+			"request": "launch",
+			"reAttach": true,
+			"url": "http://localhost:3000",
+			"pathMappings": [
+				{
+					"url": "file:///C:/Users/mrhum/Projects/Websites/Documenter/src",
+					"path": "${workspaceFolder}/src"
+				}
+			]
+		}
+	]
+}
