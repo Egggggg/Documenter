@@ -131,26 +131,26 @@ PouchDB.plugin(PouchDBFind);
 let db = new PouchDB("documents", { auto_compaction: true });
 
 db.createIndex({
-	index: { fields: ["sortKey", "tags", "type", "collection"], ddoc: "tags" }
+	index: { fields: ["sortKey", "tags", "type"], ddoc: "tags" }
 })
 	.then(() =>
 		db.createIndex({
-			index: { fields: ["sortKey", "type", "collection"], ddoc: "type" }
+			index: { fields: ["sortKey", "type"], ddoc: "sortedType" }
 		})
 	)
 	.then(() =>
 		db.createIndex({
-			index: { fields: ["type", "name", "tag", "collection"], ddoc: "vars" }
+			index: { fields: ["type", "name", "tag"], ddoc: "vars" }
 		})
 	)
 	.then(() =>
 		db.createIndex({
-			index: { fields: ["scope", "name", "collection"], ddoc: "scopes" }
+			index: { fields: ["scope", "name"], ddoc: "scopes" }
 		})
 	)
 	.then(() =>
 		db.createIndex({
-			index: { fields: ["type", "collection"], ddoc: "collection" }
+			index: { fields: ["type"], ddoc: "type" }
 		})
 	);
 
