@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { NotificationManager } from "react-notifications";
 import { useLocation, Navigate } from "react-router-dom";
 
@@ -696,6 +696,15 @@ export default function Vars(props) {
 	const [type, setType] = useState("basic");
 	const [tableData, setTableData] = useState(tableDefault);
 
+	const perhapsAddScope = useCallback(
+		(newScope) => {
+			if (scopes.indexOf(newScope) > -1) {
+				setScopes([...scopes, newScope]);
+			}
+		},
+		[scopes]
+	);
+
 	useEffect(() => {
 		const params = new URLSearchParams(search);
 
@@ -730,13 +739,21 @@ export default function Vars(props) {
 					}
 
 					if (!doc.varType) {
+						console.log(doc);
+
 						if (typeof doc.value === "string") {
+							doc.basicType = "literal";
+							doc.varType = "basic";
+
 							props.db.put({ ...doc, varType: "basic", basicType: "literal" });
 						} else if (doc.value[0] === "list") {
 							doc.value = doc.value.filter((item) => item !== "list");
+							doc.varType = "list";
 
 							props.db.put({ ...doc, varType: "list" });
 						} else {
+							doc.varType = "table";
+
 							props.db.put({ ...doc, varType: "table" });
 						}
 					}
@@ -751,19 +768,15 @@ export default function Vars(props) {
 					}
 
 					if (newVars[doc.scope][doc.name].varType === "table") {
-						newVars[doc.scope][doc.name][0].scope = doc.scope;
+						newVars[doc.scope][doc.name].value[0].scope = doc.scope;
 					}
 
-					if (scopes.indexOf(doc.scope) === -1) {
-						setScopes([...scopes, doc.scope]);
-					}
+					perhapsAddScope(doc.scope);
 				});
-
-				console.log(newVars);
 
 				setVars(newVars);
 			});
-	}, [props.db, scopes, guide, search]);
+	}, [props.db, perhapsAddScope, guide, search]);
 
 	useEffect(() => {
 		if (guide) {
@@ -1370,7 +1383,7 @@ export default function Vars(props) {
 			)}
 			{Object.keys(vars).length > 0 &&
 				Object.keys(vars).map((key) => {
-					if (key === "global") return null;
+					if (key === "global") return <></>;
 
 					return (
 						<Card key={key}>
