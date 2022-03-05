@@ -41,13 +41,9 @@ Handlebars.registerHelper("lt", (arg1, arg2) => {
 Handlebars.registerHelper("add", function () {
 	let sum = 0;
 
-	// subtract 1 to remove the lookup property from being a helper
+	// subtract 1 to remove the lookup arg from being a helper
 	for (let i = 0; i < arguments.length - 1; i++) {
-		let argNum = parseFloat(arguments[i]);
-
-		if (Number.isInteger(argNum)) {
-			argNum = Math.floor(argNum);
-		}
+		let argNum = parseNum(arguments[i]);
 
 		sum += argNum;
 	}
@@ -56,16 +52,8 @@ Handlebars.registerHelper("add", function () {
 });
 
 Handlebars.registerHelper("sub", (arg1, arg2) => {
-	arg1 = parseFloat(arg1);
-	arg2 = parseFloat(arg2);
-
-	if (Number.isInteger(arg1)) {
-		arg1 = Math.floor(arg1);
-	}
-
-	if (Number.isInteger(arg2)) {
-		arg2 = Math.floor(arg2);
-	}
+	arg1 = parseNum(arg1);
+	arg2 = parseNum(arg2);
 
 	return arg1 - arg2;
 });
@@ -73,13 +61,9 @@ Handlebars.registerHelper("sub", (arg1, arg2) => {
 Handlebars.registerHelper("mul", function () {
 	let sum = 1;
 
-	// subtract 1 to remove the lookup property from being a helper
+	// subtract 1 to remove the lookup arg from being a helper
 	for (let i = 0; i < arguments.length - 1; i++) {
-		let argNum = parseFloat(arguments[i]);
-
-		if (Number.isInteger(argNum)) {
-			argNum = Math.floor(argNum);
-		}
+		let argNum = parseNum(arguments[i]);
 
 		sum *= argNum;
 	}
@@ -88,16 +72,8 @@ Handlebars.registerHelper("mul", function () {
 });
 
 Handlebars.registerHelper("div", (arg1, arg2) => {
-	arg1 = parseFloat(arg1);
-	arg2 = parseFloat(arg2);
-
-	if (Number.isInteger(arg1)) {
-		arg1 = Math.floor(arg1);
-	}
-
-	if (Number.isInteger(arg2)) {
-		arg2 = Math.floor(arg2);
-	}
+	arg1 = parseNum(arg1);
+	arg2 = parseNum(arg2);
 
 	return arg1 / arg2;
 });
@@ -120,6 +96,16 @@ Handlebars.registerHelper("in", (list, item) => {
 
 	return output.indexOf(item) > -1;
 });
+
+function parseNum(input) {
+	input = parseFloat(input);
+
+	if (Number.isInteger(input)) {
+		input = Math.floor(input);
+	}
+
+	return input;
+}
 
 PouchDB.plugin(PouchDBFind);
 

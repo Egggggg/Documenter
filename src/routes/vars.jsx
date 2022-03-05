@@ -73,14 +73,28 @@ function addVar(newScope, newName, scopes, vars, newValue, db, setVars, setNewNa
 		return;
 	}
 
-	const scope = newScope.trim(" ");
+	let scope = newScope.trim(" ");
+
 	const name = newName.trim(" ");
+
+	if (!scope) {
+		scope = "global";
+	}
 
 	if (exists) {
 		if (!newValue) {
 			db.find({selector: {type: "var", scope, name}}).then((results) => {
 				db.remove(results.docs[0]);
 			});
+
+			const newVars = {...vars};
+			delete newVars[scope][name];
+
+			if (Object.keys(newVars[scope]).length === 0) {
+				delete newVars[scope];
+			}
+
+			setVars(newVars);
 		} else {
 			db.find({selector: {type: "var", scope, name}}).then((results) => {
 				db.put({
@@ -91,30 +105,21 @@ function addVar(newScope, newName, scopes, vars, newValue, db, setVars, setNewNa
 					scope,
 					type: "var",
 					varType: "basic",
-					basicType: newValue.type,
+					basicType: newValue.basicType,
 				});
 			});
 		}
-	} else if (newValue !== "") {
+	} else if (newValue) {
 		db.post({
-			name, value: newValue.value, scope, type: "var", varType: "basic", basicType: newValue.type,
+			name, value: newValue.value, scope: newScope, type: "var", varType: "basic", basicType: newValue.basicType,
 		});
 	}
 
 	if (newValue) {
 		setVars({
 			...vars,
-			[scope]: {...vars[scope], [name]: {value: newValue.value, varType: "basic", basicType: newValue.type}},
+			[scope]: {...vars[scope], [name]: {value: newValue.value, varType: "basic", basicType: newValue.basicType}},
 		});
-	} else if (exists) {
-		const newVars = {...vars};
-		delete newVars[scope][name];
-
-		if (Object.keys(newVars[scope]).length === 0) {
-			delete newVars[scope];
-		}
-
-		setVars(newVars);
 	}
 
 	setNewName("");
@@ -240,14 +245,15 @@ function addList(newScope, newName, vars, scopes, db, listData, setVars, setNewN
 	setListData(["list"]);
 }
 
-function selectVar(vars, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, setNewValueType, key, name) {
-	const item = vars[key][name];
+function selectVar(vars, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, setNewValueType, scope, name) {
+	console.log("nice");
+	const item = vars[scope][name];
 
 	setType(item.varType);
-	setNewScope(key === "global" ? "" : key);
+	setNewScope(scope === "global" ? "" : scope);
 	setNewName(name);
 
-	if (item.type === "basic") {
+	if (item.varType === "basic") {
 		setNewValue(item.value);
 		setNewValueType(item.basicType);
 	} else if (item.varType === "list") {
@@ -300,7 +306,11 @@ const evalValue = (vars, val, scope, name) => {
 			return [val, val];
 		}
 
-		let value = evaluateVal(val, vars, false, scope, name, 0);
+		if (val.varType === "basic" && val.basicType === "literal") {
+			return [val.value, val.value];
+		}
+
+		let value = evaluateVal(val, vars, false, scope, name, 0).value;
 
 		if (value === val.value) {
 			return [value, value];
@@ -316,7 +326,7 @@ const evalValue = (vars, val, scope, name) => {
 	}
 };
 
-const listTable = (vars, scope, name, table, setType, setNewName, setNewScope, setNewValue, setListData, setTableData) => {
+const listTable = (vars, scope, name, table, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, setNewValueType) => {
 	const comparisons = {eq: "==", lt: "<", gt: ">", isin: "in"};
 
 	let [output, outputIndex] = evaluateTable(table, vars, false, scope, name);
@@ -338,7 +348,7 @@ const listTable = (vars, scope, name, table, setType, setNewName, setNewScope, s
 	if (table.length === 1) {
 		return (<ListGroup.Item
 			action
-			onClick={() => selectVar(vars, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, scope, name)}
+			onClick={() => selectVar(vars, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, setNewValueType, scope, name)}
 		>
 			{`${name}: ${evalValue(vars, output[0], scope, name)[0]}`}
 		</ListGroup.Item>);
@@ -346,7 +356,7 @@ const listTable = (vars, scope, name, table, setType, setNewName, setNewScope, s
 
 	return (<>
 		<h3
-			onClick={() => selectVar(vars, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, scope, name)}
+			onClick={() => selectVar(vars, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, setNewValueType, scope, name)}
 		>
 			{name}
 		</h3>
@@ -938,7 +948,7 @@ export default function Vars(props) {
 						return (<ListGroup.Item
 							key={name}
 							action
-							onClick={() => selectVar(vars, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, "global", name)}
+							onClick={() => selectVar(vars, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, setNewValueType, "global", name)}
 						>
 							{`${name}: ${evalValue(vars, vars.global[name], "global", name)[0]}`}
 						</ListGroup.Item>);
@@ -946,7 +956,7 @@ export default function Vars(props) {
 						// list var
 						return (<ListGroup.Item key={name}>
 							<h3
-								onClick={() => selectVar(vars, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, "global", name)}
+								onClick={() => selectVar(vars, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, setNewValueType,"global", name)}
 							>
 								{name}
 							</h3>
@@ -970,7 +980,7 @@ export default function Vars(props) {
 					} else if (vars.global[name].varType === "table") {
 						// table var
 						return (<ListGroup.Item key={name}>
-							{listTable(vars, "global", name, vars.global[name].value, setType, setNewName, setNewScope, setNewValue, setListData, setTableData)}
+							{listTable(vars, "global", name, vars.global[name].value, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, setNewValueType)}
 						</ListGroup.Item>);
 					}
 
@@ -990,15 +1000,15 @@ export default function Vars(props) {
 							return (<ListGroup.Item
 								key={name}
 								action
-								onClick={() => selectVar(vars, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, key, name)}
+								onClick={() => selectVar(vars, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, setNewValueType, key, name)}
 							>
-								{`${name}: ${vars[key][name]}`}
+								{`${name}: ${evalValue(vars, vars[key][name], key, name)[0]}`}
 							</ListGroup.Item>);
 						} else if (vars[key][name].varType === "list") {
 							// list var
 							return (<ListGroup.Item key={name}>
 								<h3
-									onClick={() => selectVar(vars, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, key, name)}
+									onClick={() => selectVar(vars, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, setNewValueType, key, name)}
 								>
 									{name}
 								</h3>
@@ -1020,7 +1030,7 @@ export default function Vars(props) {
 						} else if (vars[key][name].varType === "table") {
 							// table var
 							return (<ListGroup.Item key={name}>
-								{listTable(vars, key, name, vars[key][name], setType, setNewName, setNewScope, setNewValue, setListData, setTableData)}
+								{listTable(vars, key, name, vars[key][name], setType, setNewName, setNewScope, setNewValue, setListData, setTableData, setNewValueType)}
 							</ListGroup.Item>);
 						}
 

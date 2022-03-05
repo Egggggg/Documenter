@@ -164,6 +164,10 @@ function evaluateRow(row, table, vars, globalRoot, scope, name, depth) {
 export function evaluateVal(item, vars, globalRoot, scope, name, depth) {
 	let val = item.value || item;
 
+	if (item.varType === "basic" && item.basicType === "literal") {
+		return val;
+	}
+
 	const up = val.startsWith("../");
 
 	if (up) {
@@ -174,10 +178,6 @@ export function evaluateVal(item, vars, globalRoot, scope, name, depth) {
 
 	if (!val.startsWith("{{") && !val.endsWith("}}")) {
 		path = val.split(".");
-
-		if (item.varType === "basic" && item.basicType === "literal") {
-			return val;
-		}
 	}
 
 	if (path.length === 1) {
@@ -186,7 +186,7 @@ export function evaluateVal(item, vars, globalRoot, scope, name, depth) {
 				path.push(path[0]);
 				path[0] = "global";
 			}
-		} else if (!(globalRoot && scope === "global")) {
+		} else if (!globalRoot && scope === "global") {
 			path.push(path[0]);
 			path[0] = scope;
 		}
@@ -202,11 +202,13 @@ export function evaluateVal(item, vars, globalRoot, scope, name, depth) {
 
 			val = vars[path[0]];
 
-			if (typeof val !== "string" && typeof val[0] !== "string") {
+			if (val.varType === "table") {
 				val = evaluateTable(val, vars, globalRoot, scope, name, depth)[0];
-			} else if (typeof val !== "string") {
+			} else if (val.varType === "list") {
 				// list
 				val = evaluateList(val, vars, globalRoot, scope, name, depth);
+			} else if (val.varType === "basic" && val.basicType === "var") {
+				val = evaluateVal(val, vars, globalRoot, scope, name, depth);
 			}
 		} else {
 			if (scope === path[0] && name === path[1]) {
@@ -240,9 +242,9 @@ export function evaluateVal(item, vars, globalRoot, scope, name, depth) {
 						path[1],
 						depth
 					)[0];
+				} else if (item.varType === "basic" && item.basicType === "var") {
+					val = evaluateVal(val, vars, globalRoot, scope, name, depth);
 				}
-			} else if (item.varType === "basic" && item.basicType === "var") {
-				val = evaluateVal(val, vars, globalRoot, scope, name, depth);
 			} else {
 				return "scope does not exist";
 			}
@@ -264,6 +266,8 @@ export function evaluateVal(item, vars, globalRoot, scope, name, depth) {
 			} else if (typeof val !== "string") {
 				// list
 				val = evaluateList(val, vars, globalRoot, path[0], path[1], depth);
+			} else if (item.varType === "basic" && item.basicType === "var") {
+				val = evaluateVal(val, vars, globalRoot, scope, name, depth);
 			}
 		} else {
 			return "scope does not exist";
