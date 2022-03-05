@@ -20,8 +20,7 @@ Handlebars.registerHelper("eq", function () {
 	let last = arguments[0];
 
 	for (let i = 0; i < arguments.length - 1; i++) {
-		// eslint-disable-next-line eqeqeq
-		if (arguments[i] != last) {
+		if (arguments[i] !== last) {
 			return false;
 		}
 
@@ -136,7 +135,7 @@ db.createIndex({
 	)
 	.then(() =>
 		db.createIndex({
-			index: { fields: ["type", "name", "tag"], ddoc: "vars" }
+			index: { fields: ["type", "name", "scope"], ddoc: "vars" }
 		})
 	)
 	.then(() =>

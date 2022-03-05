@@ -25,3 +25,5 @@ yarn-error.log*
 test.js
 *.7z
 *.zip
+
+.env

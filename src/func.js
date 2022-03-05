@@ -1,8 +1,7 @@
 import Handlebars from "handlebars/dist/handlebars.min.js";
 
 const comparisons = {
-	// eslint-disable-next-line eqeqeq
-	eq: (arg1, arg2) => arg1 == arg2,
+	eq: (arg1, arg2) => arg1 === arg2,
 	lt: (arg1, arg2) => parseFloat(arg1) < parseFloat(arg2),
 	gt: (arg1, arg2) => parseFloat(arg1) > parseFloat(arg2),
 	isin: (arg1, arg2) => {
@@ -164,8 +163,6 @@ function evaluateRow(row, table, vars, globalRoot, scope, name, depth) {
 
 export function evaluateVal(item, vars, globalRoot, scope, name, depth) {
 	let val = item.value || item;
-
-	console.log();
 
 	const up = val.startsWith("../");
 
