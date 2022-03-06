@@ -321,8 +321,8 @@ export default function SaveLoad(props) {
 			})
 			.join("");
 
-		name = name.trim(" ");
-		scope = scope.trim(" ");
+		name = name.trim();
+		scope = scope.trim();
 
 		if (
 			name.indexOf(".") > -1 ||

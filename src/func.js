@@ -162,118 +162,20 @@ function evaluateRow(row, table, vars, globalRoot, scope, name, depth) {
 }
 
 export function evaluateVal(item, vars, globalRoot, scope, name, depth) {
+	if (!depth) {
+		depth = 0;
+	}
+	
+	depth++
+
+	if (depth > depthMax) {
+		return "too much recursion";
+	}
+
 	let val = item.value || item;
 
-	if (item.varType === "basic" && item.basicType === "literal") {
-		return val;
-	}
-
-	const up = val.startsWith("../");
-
-	if (up) {
-		val = val.substring(3);
-	}
-
-	let path = [];
-
-	if (!val.startsWith("{{") && !val.endsWith("}}")) {
-		path = val.split(".");
-	}
-
-	if (path.length === 1) {
-		if (up) {
-			if (!globalRoot) {
-				path.push(path[0]);
-				path[0] = "global";
-			}
-		} else if (!globalRoot && scope === "global") {
-			path.push(path[0]);
-			path[0] = scope;
-		}
-
-		if (globalRoot) {
-			if (scope === "global" && name === path[0]) {
-				throw Error("too much recursion");
-			}
-
-			if (!vars[path[0]]) {
-				return "variable does not exist";
-			}
-
-			val = vars[path[0]];
-
-			if (val.varType === "table") {
-				val = evaluateTable(val, vars, globalRoot, scope, name, depth)[0];
-			} else if (val.varType === "list") {
-				// list
-				val = evaluateList(val, vars, globalRoot, scope, name, depth);
-			} else if (val.varType === "basic" && val.basicType === "var") {
-				val = evaluateVal(val, vars, globalRoot, scope, name, depth);
-			}
-		} else {
-			if (scope === path[0] && name === path[1]) {
-				throw Error("too much recursion");
-			}
-
-			if (vars.global) {
-				if (!vars.global[path[1]]) {
-					return val;
-				}
-
-				val = vars.global[path[1]];
-
-				if (item.varType === "table") {
-					// table
-					val = evaluateTable(
-						val,
-						vars,
-						globalRoot,
-						"global",
-						path[1],
-						depth
-					)[0];
-				} else if (item.varType === "list") {
-					// list
-					val = evaluateList(
-						val,
-						vars,
-						globalRoot,
-						"global",
-						path[1],
-						depth
-					)[0];
-				} else if (item.varType === "basic" && item.basicType === "var") {
-					val = evaluateVal(val, vars, globalRoot, scope, name, depth);
-				}
-			} else {
-				return "scope does not exist";
-			}
-		}
-	} else if (path.length === 2) {
-		if (scope === path[0] && name === path[1]) {
-			throw Error("too much recursion");
-		}
-
-		if (vars[path[0]]) {
-			if (!vars[path[0]][path[1]]) {
-				return "variable does not exist";
-			}
-
-			val = vars[path[0]][path[1]];
-
-			if (typeof val !== "string" && typeof val[0] !== "string") {
-				val = evaluateTable(val, vars, globalRoot, path[0], path[1], depth)[0];
-			} else if (typeof val !== "string") {
-				// list
-				val = evaluateList(val, vars, globalRoot, path[0], path[1], depth);
-			} else if (item.varType === "basic" && item.basicType === "var") {
-				val = evaluateVal(val, vars, globalRoot, scope, name, depth);
-			}
-		} else {
-			return "scope does not exist";
-		}
-	} else {
-		let tempVars = { ...vars.map((current) => current.value) };
+	if (val.startsWith("{{") && val.endsWith("}}")) {
+		let tempVars = map((current) => current.value);
 
 		if (!globalRoot) {
 			delete tempVars.global;

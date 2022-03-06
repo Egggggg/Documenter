@@ -21,8 +21,8 @@ const checkInvalidName = (name) => {
 };
 
 function verifyVar(newScope, newName, vars, scopes) {
-	let scope = newScope.trim(" ");
-	let name = newName.trim(" ");
+	let scope = newScope.trim();
+	let name = newName.trim();
 	let exists = false;
 
 	if (!name) {
@@ -73,9 +73,9 @@ function addVar(newScope, newName, scopes, vars, newValue, db, setVars, setNewNa
 		return;
 	}
 
-	let scope = newScope.trim(" ");
+	let scope = newScope.trim();
 
-	const name = newName.trim(" ");
+	const name = newName.trim();
 
 	if (!scope) {
 		scope = "global";
@@ -127,8 +127,8 @@ function addVar(newScope, newName, scopes, vars, newValue, db, setVars, setNewNa
 }
 
 function addTable(newScope, newName, scopes, tableData, db, vars, setVars, setNewName, setNewScope, setTableData) {
-	let scope = newScope.trim(" ");
-	let name = newName.trim(" ");
+	let scope = newScope.trim();
+	let name = newName.trim();
 	let exists = false;
 
 	if (!name) {
@@ -212,8 +212,8 @@ function addList(newScope, newName, vars, scopes, db, listData, setVars, setNewN
 		return;
 	}
 
-	const scope = newScope.trim(" ");
-	const name = newName.trim(" ");
+	const scope = newScope.trim();
+	const name = newName.trim();
 
 	if (exists) {
 		db.find({selector: {type: "var", scope, name}}).then((results) => {
