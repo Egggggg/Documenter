@@ -174,6 +174,9 @@ export function evaluateVal(item, vars, globalRoot, scope, name, depth) {
 
 	let val = item.value || item;
 
+	if (scope && scope !== "global" && ) {
+	}
+
 	if (val.startsWith("{{") && val.endsWith("}}")) {
 		let tempVars = map((current) => current.value);
 
