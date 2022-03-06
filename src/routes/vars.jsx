@@ -299,7 +299,7 @@ function addCondition(tableData, index, setTableData) {
 	};
 }
 
-const evalValue = (vars, val, scope, name) => {
+const evalValue = (vars, val, scope) => {
 	try {
 		// invalid var
 		if (!val.varType) {
@@ -310,7 +310,7 @@ const evalValue = (vars, val, scope, name) => {
 			return [val.value, val.value];
 		}
 
-		let value = evaluateVal(val, vars, false, scope, name, 0).value;
+		let value = evaluateVal(val, vars, false, scope, 0);
 
 		if (value === val.value) {
 			return [value, value];
@@ -329,17 +329,17 @@ const evalValue = (vars, val, scope, name) => {
 const listTable = (vars, scope, name, table, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, setNewValueType) => {
 	const comparisons = {eq: "==", lt: "<", gt: ">", isin: "in"};
 
-	let [output, outputIndex] = evaluateTable(table, vars, false, scope, name);
+	let [output, outputIndex] = evaluateTable(table, vars, false, scope);
 
 	if (outputIndex === -1) {
 		if (table[0].type === "var") {
-			output = evalValue(vars, table[0].value, scope, name);
+			output = evalValue(vars, table[0].value, scope);
 		} else {
 			output = [output, output];
 		}
 	} else {
 		if (outputIndex && table[outputIndex].type === "var") {
-			output = evalValue(vars, table[outputIndex].value, scope, name);
+			output = evalValue(vars, table[outputIndex].value, scope);
 		} else {
 			output = [output, output];
 		}
@@ -350,7 +350,7 @@ const listTable = (vars, scope, name, table, setType, setNewName, setNewScope, s
 			action
 			onClick={() => selectVar(vars, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, setNewValueType, scope, name)}
 		>
-			{`${name}: ${evalValue(vars, output[0], scope, name)[0]}`}
+			{`${name}: ${evalValue(vars, output[0], scope)[0]}`}
 		</ListGroup.Item>);
 	}
 
@@ -382,7 +382,7 @@ const listTable = (vars, scope, name, table, setType, setNewName, setNewScope, s
 								<td
 									className={outputIndex === -1 ? "bg-primary text-light" : ""}
 								>
-									{row.type === "var" ? evalValue(vars, row.value, scope, name)[0] : row.value}
+									{row.type === "var" ? evalValue(vars, row.value, scope)[0] : row.value}
 								</td>
 							</tr>
 							<tr key="output" className="bg-primary text-light">
@@ -405,11 +405,11 @@ const listTable = (vars, scope, name, table, setType, setNewName, setNewScope, s
 							let comparison = comparisons[condition.comparison];
 
 							if (condition.val1Type === "var") {
-								val1 = evalValue(vars, val1, scope, name)[0];
+								val1 = evalValue(vars, val1, scope)[0];
 							}
 
 							if (condition.val2Type === "var") {
-								val2 = evalValue(vars, val2, scope, name)[0];
+								val2 = evalValue(vars, val2, scope)[0];
 							}
 
 							return (<tr key={rowIndex}>
@@ -425,7 +425,7 @@ const listTable = (vars, scope, name, table, setType, setNewName, setNewScope, s
 							<td
 								className={outputIndex === index ? "bg-primary text-light" : ""}
 							>
-								{row[0].type === "var" ? evalValue(vars, row[0].value, scope, name)[0] : row[0].value}
+								{row[0].type === "var" ? evalValue(vars, row[0].value, scope)[0] : row[0].value}
 							</td>
 						</tr>
 					</>);
@@ -915,7 +915,7 @@ export default function Vars(props) {
 						key={index}
 					>
 						{item[1] === "literal" && item[0]}
-						{item[1] === "var" && evalValue(vars, item[0], newScope || "global", newName)[0]}
+						{item[1] === "var" && evalValue(vars, item[0], newScope || "global")[0]}
 						{item[1] !== "literal" && item[1] !== "var" && `${item[0]} (invalid)`}
 					</ListGroup.Item>);
 				})}
@@ -950,7 +950,7 @@ export default function Vars(props) {
 							action
 							onClick={() => selectVar(vars, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, setNewValueType, "global", name)}
 						>
-							{`${name}: ${evalValue(vars, vars.global[name], "global", name)[0]}`}
+							{`${name}: ${evalValue(vars, vars.global[name], "global")[0]}`}
 						</ListGroup.Item>);
 					} else if (vars.global[name].varType === "list") {
 						// list var
@@ -969,7 +969,7 @@ export default function Vars(props) {
 										let val = item[0];
 
 										if (item[1] === "var") {
-											val = evalValue(vars, val, "global", name)[0];
+											val = evalValue(vars, val, "global")[0];
 										}
 
 										return <ListGroup.Item>{val}</ListGroup.Item>;
@@ -1002,7 +1002,7 @@ export default function Vars(props) {
 								action
 								onClick={() => selectVar(vars, setType, setNewName, setNewScope, setNewValue, setListData, setTableData, setNewValueType, key, name)}
 							>
-								{`${name}: ${evalValue(vars, vars[key][name], key, name)[0]}`}
+								{`${name}: ${evalValue(vars, vars[key][name], key)[0]}`}
 							</ListGroup.Item>);
 						} else if (vars[key][name].varType === "list") {
 							// list var
@@ -1019,7 +1019,7 @@ export default function Vars(props) {
 											let val = item;
 
 											if (val === "var") {
-												val = evalValue(val, key, name)[0];
+												val = evalValue(val, key)[0];
 											}
 
 											return <ListGroup.Item>{val}</ListGroup.Item>;
