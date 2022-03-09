@@ -178,7 +178,7 @@ export function evaluateVal(item, vars, globalRoot, scope, depth) {
 	}
 
 	if (val.startsWith("{{") && val.endsWith("}}")) {
-		let tempVars = vars.map((current) => current.value);
+		let tempVars = {...vars};
 
 		if (!globalRoot) {
 			delete tempVars.global;
@@ -201,6 +201,8 @@ export function evaluateVal(item, vars, globalRoot, scope, depth) {
 		if (scope !== "global") {
 			if (!val.startsWith("../")) {
 				path = `${scope}.${path}`;
+			} else if (!globalRoot) {
+				path = `global.${path}`;
 			}
 		} else {
 			if (!globalRoot) {
@@ -215,23 +217,19 @@ export function evaluateVal(item, vars, globalRoot, scope, depth) {
 		return "not found";
 	}
 
-	if (found["varType"] !== "basic" || found["basicType"] === "var") {
-		let newScope = found["value"].split(".")[0];
+	if (found.varType !== "basic" || found.basicType === "var") {
+		let newScope = path.split(".")[0];
 
-		if (newScope === found["value"]) {
-			newScope = scope;
-		}
-
-		if (found["varType"] === "basic") {
-			return evaluateVal(found["value"], vars, globalRoot, newScope, depth);
-		} else if (found["varType"] === "list") {
-			return evaluateList(found["value"], vars, globalRoot, newScope, depth);
-		} else if (found["varType"] === "table") {
-			return evaluateTable(found["value"], vars, globalRoot, newScope, depth);
+		if (found.varType === "basic") {
+			return evaluateVal(found, vars, globalRoot, newScope, depth);
+		} else if (found.varType === "list") {
+			return evaluateList(found, vars, globalRoot, newScope, depth);
+		} else if (found.varType === "table") {
+			return evaluateTable(found, vars, globalRoot, newScope, depth);
 		}
 	}
 
-	return found["value"];
+	return found.value;
 }
 
 function evaluateList(list, vars, globalRoot, scope, depth) {
