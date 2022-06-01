@@ -136,19 +136,17 @@ db.createIndex({
 	);
 
 ReactDOM.render(
-	<React.StrictMode>
-		<HashRouter>
-			<Routes>
-				<Route path="/" element={<App />}>
-					<Route path="/" element={<List db={db} />} />
-					<Route path="create" element={<Creator db={db} />} />
-					<Route path="vars" element={<Vars db={db} />} />
-					<Route path="save-load" element={<SaveLoad db={db} />} />
-					<Route path="guides" element={<Guides />} />
-					<Route path="docs" element={<Docs />} />
-				</Route>
-			</Routes>
-		</HashRouter>
-	</React.StrictMode>,
+	<HashRouter>
+		<Routes>
+			<Route path="/" element={<App />}>
+				<Route index element={<List db={db} />} />
+				<Route path="create" element={<Creator db={db} />} />
+				<Route path="vars" element={<Vars db={db} />} />
+				<Route path="save-load" element={<SaveLoad db={db} />} />
+				<Route path="guides" element={<Guides />} />
+				<Route path="docs" element={<Docs />} />
+			</Route>
+		</Routes>
+	</HashRouter>,
 	document.getElementById("root")
 );

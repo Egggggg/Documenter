@@ -203,7 +203,7 @@ export default function SaveLoad(props) {
 			!e.target.elements.formBasicLoadFile.files[0] &&
 			loadOptions.addType !== "replaceAll"
 		) {
-			NotificationManager.warning(null, "No file chosen");
+			NotificationManager.warning("No file chosen");
 			return;
 		}
 
@@ -247,7 +247,6 @@ export default function SaveLoad(props) {
 		} else if (file.type === "text/csv") {
 			if (loadOptions.type !== "vars") {
 				NotificationManager.warning(
-					null,
 					"You can only load variables from .csv files"
 				);
 
@@ -259,7 +258,6 @@ export default function SaveLoad(props) {
 		} else if (file.type === "text/plain") {
 			if (loadOptions.type !== "docs") {
 				NotificationManager.warning(
-					null,
 					"You can only load documents from .txt files"
 				);
 
@@ -273,7 +271,6 @@ export default function SaveLoad(props) {
 		} else if (file.type === "text/markdown" || file.name.endsWith(".md")) {
 			if (loadOptions.type !== "docs") {
 				NotificationManager.warning(
-					null,
 					"You can only load documents from .md files"
 				);
 
@@ -495,14 +492,14 @@ export default function SaveLoad(props) {
 		}
 
 		setShowModal(false);
-		NotificationManager.success(null, "Loading complete");
+		NotificationManager.success("Loading complete");
 	};
 
 	const loadCSV = (text) => {
 		const { data } = Papa.parse(text);
 
 		if (data[0].indexOf("Name") === -1 || data[0].indexOf("Value") === -1) {
-			NotificationManager.warning(null, "Name and Value columns are required");
+			NotificationManager.warning("Name and Value columns are required");
 			return;
 		}
 

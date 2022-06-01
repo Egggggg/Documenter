@@ -178,7 +178,7 @@ export function evaluateVal(item, vars, globalRoot, scope, depth) {
 	}
 
 	if (val.startsWith("{{") && val.endsWith("}}")) {
-		let tempVars = {...vars};
+		let tempVars = { ...vars };
 
 		if (!globalRoot) {
 			delete tempVars.global;

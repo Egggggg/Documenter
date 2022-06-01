@@ -40,8 +40,8 @@ export default function Docs() {
 				<Card className="mb-3">
 					<Card.Header>Basic Variables</Card.Header>
 					<Card.Body>
-						Variables can be set to any string, and will be evaluated to their
-						assigned value when used in a document. This is done using{" "}
+						Basic variables can be set to any string, and will be evaluated to
+						their assigned value when used in a document. This is done using{" "}
 						<a href="https://handlebarsjs.com/">HandlebarsJS</a> with the
 						default delimiter, so variables are used in documents by surrounding
 						their name with <code>{"{{}}"}</code>, like{" "}
@@ -54,19 +54,19 @@ export default function Docs() {
 						Variables and documents can be given scopes. Scoped variables will
 						need to be accessed using their scope (eg.{" "}
 						<code>{"{{scope.name}}"}</code>), unless the document they're used
-						in is in the same scope. If a document and variable are in different
-						scopes, the variable must be prepended with <code>../</code> to
+						in is in the same scope. If a document and variable are both scoped
+						differently, the variable must be prepended with <code>../</code> to
 						first return to the global scope.
 					</Card.Body>
 				</Card>
 				<Card className="mb-3">
 					<Card.Header>Tables</Card.Header>
 					<Card.Body>
-						Tables (parameterized variables) take different values depending on
-						their conditions. Each output has a value, and the variable takes
-						that value if all of its conditions are true. If multiple outputs
-						would be returned, it takes either the first or last one, depending
-						on the priority that was set.
+						Tables take different values depending on their conditions. Each
+						output has a value, and the variable takes that value if all of its
+						conditions are true. If multiple outputs would be returned, it takes
+						either the first or last one, depending on the priority that was
+						set.
 					</Card.Body>
 				</Card>
 			</div>
@@ -92,8 +92,7 @@ export default function Docs() {
 					<Card.Header>Evaluate Templates</Card.Header>
 					<Card.Body>
 						This option replaces variable references in the human readable .md
-						files with their values. This works for basic variables as well as
-						tables.
+						files with their values.
 					</Card.Body>
 				</Card>
 			</div>
@@ -218,101 +217,6 @@ export default function Docs() {
 						putting the comparison in a subexpression within an <code>if</code>{" "}
 						expression, like this:{" "}
 						<code>{"{{#if (eq varName 3)}}It's true!{{/if}}"}</code>
-					</Card.Body>
-				</Card>
-				<Card className="mb-3">
-					<Card.Header>Math</Card.Header>
-					<Card.Body>
-						There are six custom math expressions. All of them parse the
-						arguments into floats.
-						<ListGroup className="mt-3">
-							<ListGroup.Item>
-								<h5>add [args]</h5>
-								<p>
-									Returns all elements of <code>args</code> added together.
-								</p>
-								<code>
-									{"{{add 3 3}} -> 6"}
-									<br />
-									{"{{add 3 1.5}} -> 4.5"}
-									<br />
-									{"{{add 3 -3}} -> 0"}
-									<br />
-									{"{{add 3 3 3}} -> 9"}
-								</code>
-							</ListGroup.Item>
-							<ListGroup.Item>
-								<h5>sub arg1 arg2</h5>
-								<p>
-									Returns <code>arg2</code> subtracted from <code>arg1</code>.
-								</p>
-								<code>
-									{"{{sub 3 3}} -> 0"}
-									<br />
-									{"{{sub 3 1.5}} -> 1.5"}
-									<br />
-									{"{{sub 3 -3}} -> 6"}
-								</code>
-							</ListGroup.Item>
-							<ListGroup.Item>
-								<h5>mul [args]]</h5>
-								<p>
-									Returns all elements of <code>args</code> multiplied together.
-								</p>
-								<code>
-									{"{{mul 3 3}} -> 9"}
-									<br />
-									{"{{mul 3 1.5}} -> 4.5"}
-									<br />
-									{"{{mul 3 -3}} -> -9"}
-									<br />
-									{"{{mul 3 3 3}} -> 27"}
-									<br />
-								</code>
-							</ListGroup.Item>
-							<ListGroup.Item>
-								<h5>div arg1 arg2</h5>
-								<p>
-									Returns <code>arg1</code> divided by <code>arg2</code>.
-								</p>
-								<code>
-									{"{{div 3 3}} -> 1"}
-									<br />
-									{"{{div 3 1.5}} -> 2"}
-									<br />
-									{"{{div 3 -3}} -> -1"}
-									<br />
-								</code>
-							</ListGroup.Item>
-							<ListGroup.Item>
-								<h5>floor arg</h5>
-								<p>
-									Returns <code>arg</code> rounded to the next lowest integer.
-									This is done automatically with the other expressions when
-									possible to avoid floating point errors.
-								</p>
-								<code>
-									{"{{floor 1.1}} -> 1"}
-									<br />
-									{"{{floor 2.5}} -> 2"}
-									<br />
-									{"{{floor 3.9}} -> 3"}
-								</code>
-							</ListGroup.Item>
-							<ListGroup.Item>
-								<h5>ceil arg</h5>
-								<p>
-									Returns <code>arg</code> rounded to the next highest integer.
-								</p>
-								<code>
-									{"{{ceil 1.1}} -> 2"}
-									<br />
-									{"{{ceil 2.5}} -> 3"}
-									<br />
-									{"{{ceil 3.9}} -> 4"}
-								</code>
-							</ListGroup.Item>
-						</ListGroup>
 					</Card.Body>
 				</Card>
 			</div>

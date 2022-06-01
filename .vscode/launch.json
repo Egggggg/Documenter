@@ -13,6 +13,28 @@
 					"path": "${workspaceFolder}/src"
 				}
 			]
+		},
+		{
+			"type": "node",
+			"name": "vscode-jest-tests.v2",
+			"request": "launch",
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen",
+			"disableOptimisticBPs": true,
+			"runtimeExecutable": "npm",
+			"protocol": "inspector",
+			"cwd": "C:\\Users\\mrhum\\Projects\\UserVars\\src",
+			"args": [
+				"test",
+				"--",
+				"test",
+				"--runInBand",
+				"--watchAll=false",
+				"--testNamePattern",
+				"${jest.testNamePattern}",
+				"--runTestsByPath",
+				"${jest.testFile}"
+			]
 		}
 	]
 }

@@ -182,7 +182,7 @@ export default function Creator(props) {
 		}
 
 		if (!leave) {
-			NotificationManager.success(null, "Saved", 750);
+			NotificationManager.success("Saved", null, 750);
 		}
 
 		if (leave) {

@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useRef, useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { UserVars } from "uservars";
+
 import { NotificationManager } from "react-notifications";
-import { Navigate, useLocation } from "react-router-dom";
 
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -12,351 +14,48 @@ import Popover from "react-bootstrap/Popover";
 import Table from "react-bootstrap/Table";
 import ToggleButton from "react-bootstrap/ToggleButton";
 import ToggleButtonGroup from "react-bootstrap/ToggleButtonGroup";
-import { evaluateTable, evaluateVal } from "../func";
 
-const tableDefault = [
-	{ type: "literal", value: "", priority: "last", scope: "global" }
-];
-
-const checkInvalidName = (name) => {
-	return (
-		name.indexOf(".") > -1 ||
-		name.indexOf("/") > -1 ||
-		name.indexOf(" ") > -1 ||
-		name.indexOf("{") > -1 ||
-		name.indexOf("}") > -1
-	);
+const defaultVals = {
+	basic: {
+		name: "",
+		scope: "",
+		value: "",
+		varType: "basic"
+	},
+	list: {
+		name: "",
+		scope: "",
+		value: [],
+		varType: "list"
+	},
+	table: {
+		name: "",
+		scope: "",
+		value: [
+			{
+				output: "",
+				conditions: [
+					{
+						val1: "",
+						comparison: "eq",
+						val2: ""
+					}
+				]
+			}
+		],
+		varType: "table",
+		default: "",
+		priority: "first"
+	},
+	expression: {
+		name: "",
+		scope: "",
+		value: "",
+		varType: "expression",
+		functions: [],
+		vars: {}
+	}
 };
-
-function verifyVar(newScope, newName, vars, scopes) {
-	let scope = newScope.trim();
-	let name = newName.trim();
-	let exists = false;
-
-	if (!name) {
-		NotificationManager.error(null, "Please enter a name");
-
-		return;
-	}
-
-	if (checkInvalidName(name)) {
-		NotificationManager.error(
-			null,
-			"Name cannot include '.', '/', ' ' (space), '{', or '}'"
-		);
-
-		return { success: false, exists };
-	}
-
-	if (checkInvalidName(scope)) {
-		NotificationManager.error(
-			null,
-			"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
-		);
-
-		return { success: false, exists };
-	}
-
-	if (!scope) {
-		scope = "global";
-	}
-
-	if (vars[scope]) {
-		exists = Object.keys(vars[scope]).indexOf(name) > -1;
-	}
-
-	if (scope === "global" && scopes.indexOf(name) > -1) {
-		NotificationManager.error(null, "There is already a scope with this name");
-
-		return { success: false, exists };
-	}
-
-	if (vars.global && vars.global[scope]) {
-		NotificationManager.error(
-			null,
-			"There is a variable in the global scope with this scope name"
-		);
-
-		return { success: false, exists };
-	}
-
-	return { success: true, exists };
-}
-
-function addVar(
-	newScope,
-	newName,
-	scopes,
-	vars,
-	newValue,
-	db,
-	setVars,
-	setNewName,
-	setNewValue
-) {
-	const { success, exists } = verifyVar(newScope, newName, vars, scopes);
-
-	if (!success) {
-		return;
-	}
-
-	let scope = newScope.trim();
-
-	const name = newName.trim();
-
-	if (!scope) {
-		scope = "global";
-	}
-
-	if (exists) {
-		if (!newValue) {
-			db.find({ selector: { type: "var", scope, name } }).then((results) => {
-				db.remove(results.docs[0]);
-			});
-
-			const newVars = { ...vars };
-			delete newVars[scope][name];
-
-			if (Object.keys(newVars[scope]).length === 0) {
-				delete newVars[scope];
-			}
-
-			setVars(newVars);
-		} else {
-			db.find({ selector: { type: "var", scope, name } }).then((results) => {
-				db.put({
-					_id: results.docs[0]._id,
-					_rev: results.docs[0]._rev,
-					name,
-					value: newValue.value,
-					scope,
-					type: "var",
-					varType: "basic",
-					basicType: newValue.basicType
-				});
-			});
-		}
-	} else if (newValue) {
-		db.post({
-			name,
-			value: newValue.value,
-			scope: newScope,
-			type: "var",
-			varType: "basic",
-			basicType: newValue.basicType
-		});
-	}
-
-	if (newValue) {
-		setVars({
-			...vars,
-			[scope]: {
-				...vars[scope],
-				[name]: {
-					value: newValue.value,
-					varType: "basic",
-					basicType: newValue.basicType
-				}
-			}
-		});
-	}
-
-	setNewName("");
-	setNewValue("");
-}
-
-function addTable(
-	newScope,
-	newName,
-	scopes,
-	tableData,
-	db,
-	vars,
-	setVars,
-	setNewName,
-	setNewScope,
-	setTableData
-) {
-	let scope = newScope.trim();
-	let name = newName.trim();
-	let exists = false;
-
-	if (!name) {
-		NotificationManager.error(null, "Please enter a name");
-
-		return;
-	}
-
-	if (checkInvalidName(name)) {
-		NotificationManager.error(
-			null,
-			"Name cannot include '.', '/', ' ' (space), '{', or '}'"
-		);
-
-		return;
-	}
-
-	if (checkInvalidName(scope)) {
-		NotificationManager.error(
-			null,
-			"Scope cannot include '.', '/', ' ' (space), '{', or '}'"
-		);
-
-		return;
-	}
-
-	if (!tableData[0].value) {
-		NotificationManager.error(null, "Please enter a default value");
-
-		return;
-	}
-
-	if (!scope) {
-		scope = "global";
-	}
-
-	if (vars[scope]) {
-		exists = Object.keys(vars[scope]).indexOf(name) > -1;
-	}
-
-	if (scope === "global" && scopes.indexOf(name) > -1) {
-		NotificationManager.error(null, "There is already a scope with this name");
-
-		return;
-	}
-
-	// if vars[scope] isn't an object (scope) or undefined (nonexistent), it is a variable
-	if (vars.global && vars.global[scope]) {
-		NotificationManager.error(
-			null,
-			"There is a variable in the global scope with this scope name"
-		);
-
-		return;
-	}
-
-	if (exists) {
-		db.find({ selector: { type: "var", scope, name } }).then((results) => {
-			db.put({
-				_id: results.docs[0]._id,
-				_rev: results.docs[0]._rev,
-				name,
-				value: tableData,
-				scope,
-				type: "var",
-				varType: "table"
-			});
-		});
-	} else {
-		db.post({
-			name,
-			value: tableData,
-			scope,
-			type: "var",
-			varType: "table"
-		});
-	}
-
-	setVars({
-		...vars,
-		[scope]: {
-			...vars[scope],
-			[name]: tableData
-		}
-	});
-
-	setNewName("");
-	setNewScope("");
-	setTableData(tableDefault);
-}
-
-function addList(
-	newScope,
-	newName,
-	vars,
-	scopes,
-	db,
-	listData,
-	setVars,
-	setNewName,
-	setNewScope,
-	setNewValue,
-	setListData
-) {
-	const { success, exists } = verifyVar(newScope, newName, vars, scopes);
-
-	if (!success) {
-		return;
-	}
-
-	const scope = newScope.trim();
-	const name = newName.trim();
-
-	if (exists) {
-		db.find({ selector: { type: "var", scope, name } }).then((results) => {
-			db.put({
-				_id: results.docs[0]._id,
-				_rev: results.docs[0]._rev,
-				name,
-				value: listData,
-				scope,
-				type: "var",
-				varType: "list"
-			});
-		});
-	} else {
-		db.post({
-			name,
-			value: listData,
-			scope,
-			type: "var",
-			varType: "list"
-		});
-	}
-
-	setVars({
-		...vars,
-		[scope]: {
-			...vars[scope],
-			[name]: listData
-		}
-	});
-
-	setNewName("");
-	setNewScope("");
-	setNewValue("");
-	setListData(["list"]);
-}
-
-function selectVar(
-	vars,
-	setType,
-	setNewName,
-	setNewScope,
-	setNewValue,
-	setListData,
-	setTableData,
-	setNewValueType,
-	scope,
-	name
-) {
-	console.log("nice");
-	const item = vars[scope][name];
-
-	setType(item.varType);
-	setNewScope(scope === "global" ? "" : scope);
-	setNewName(name);
-
-	if (item.varType === "basic") {
-		setNewValue(item.value);
-		setNewValueType(item.basicType);
-	} else if (item.varType === "list") {
-		setNewValueType("literal");
-		setListData(JSON.parse(JSON.stringify(item)));
-	} else if (item.varType === "table") {
-		setTableData(JSON.parse(JSON.stringify(item)));
-	}
-}
 
 function popover(setGuide) {
 	return (title, text, prev, next) => {
@@ -377,522 +76,220 @@ function popover(setGuide) {
 	};
 }
 
-function addRow(setTableData, tableData) {
-	setTableData([
-		...tableData,
-		[
-			{
-				type: "literal",
-				value: ""
-			},
-			{
-				val1Type: "var",
-				val1: "",
-				comparison: "eq",
-				val2Type: "literal",
-				val2: ""
-			}
-		]
-	]);
+async function storeVar(value, db) {
+	const existing = await db.find({
+		selector: { type: "var", scope: value.scope, name: value.name }
+	});
+
+	if (!value.value && existing.docs.length > 0) {
+		console.log(existing);
+		db.remove(existing.docs[0]);
+		return;
+	}
+
+	const data = {
+		name: value.name,
+		scope: value.scope,
+		value: value.value,
+		type: "var",
+		varType: value.varType,
+		default: value.default,
+		priority: value.priority,
+		vars: value.vars,
+		functions: value.functions
+	};
+
+	if (existing.docs.length > 0) {
+		db.put({
+			_id: existing.docs[0]._id,
+			_rev: existing.docs[0]._rev,
+			...data
+		});
+	} else {
+		db.post(data);
+	}
 }
 
-function addCondition(tableData, index, setTableData) {
-	return () => {
-		const copy = [...tableData];
+function submitVar(
+	newValObject,
+	setNewVal,
+	userVars,
+	vars,
+	setVars,
+	db,
+	refState,
+	setRefState
+) {
+	return async (e) => {
+		e.preventDefault();
 
-		copy[index].push({
-			val1Type: "var",
-			val1: "",
-			comparison: "eq",
-			val2Type: "literal",
-			val2: ""
-		});
+		const newVal = { ...newValObject };
 
-		setTableData(copy);
+		if (newVal.scope === "") newVal.scope = "global";
+		if (newVal.value === "") newVal.value = { value: "!" };
+
+		try {
+			let success = userVars.current.setVar(newVal);
+
+			console.log(success);
+			console.log(userVars.current.vars);
+
+			if (!success) {
+				NotificationManager.error(
+					"Couldn't create variable",
+					"An error occurred"
+				);
+				return;
+			}
+
+			let evaluated = userVars.current.getVar(newVal.name);
+
+			setVars({
+				...vars,
+				[newVal.scope]: {
+					...vars[newVal.scope],
+					[newVal.name]: evaluated
+				}
+			});
+
+			await storeVar(newVal, db);
+			setNewVal(defaultVals[newVal.varType]);
+
+			NotificationManager.success("Variable created");
+		} catch (err) {
+			NotificationManager.error(err.toString(), "An error occurred");
+		}
 	};
 }
 
-const evalValue = (rawVars, vars, val, scope) => {
-	try {
-		let value = evaluateVal(val, vars, false, scope, 0);
+function formatVars(evaluated) {
+	const output = { global: {} };
 
-		if (value === val) {
-			return [value, value];
+	for (let i of Object.keys(evaluated)) {
+		const current = evaluated[i];
+
+		console.log(current);
+
+		if (
+			typeof current === "string" ||
+			current instanceof Array ||
+			("output" in current && typeof current.output === "string")
+		) {
+			output.global[i] = current;
 		} else {
-			return [
-				`${val} (${val instanceof Array ? "LIST" : value})`,
-				value
-			];
-		}
-	} catch (err) {
-		if (err.message === "too much recursion") {
-			return [err.message, null];
-		}
+			output[i] = {};
 
-		throw err;
-	}
-};
+			for (let e of Object.keys(current)) {
+				const current2 = current[e];
 
-const listTable = (
-	vars,
-	scope,
-	name,
-	table,
-	setType,
-	setNewName,
-	setNewScope,
-	setNewValue,
-	setListData,
-	setTableData,
-	setNewValueType
-) => {
-	const comparisons = { eq: "==", lt: "<", gt: ">", isin: "in" };
-
-	let [output, outputIndex] = evaluateTable(table, vars, false, scope);
-
-	if (outputIndex === -1) {
-		if (table[0].type === "var") {
-			output = evalValue(vars, table[0].value, scope);
-		} else {
-			output = [output, output];
-		}
-	} else {
-		if (outputIndex && table[outputIndex].type === "var") {
-			output = evalValue(vars, table[outputIndex].value, scope);
-		} else {
-			output = [output, output];
+				output[i][e] = current2;
+			}
 		}
 	}
 
-	if (table.length === 1) {
-		return (
-			<ListGroup.Item
-				action
-				onClick={() =>
-					selectVar(
-						vars,
-						setType,
-						setNewName,
-						setNewScope,
-						setNewValue,
-						setListData,
-						setTableData,
-						setNewValueType,
-						scope,
-						name
-					)
-				}
-			>
-				{`${name}: ${evalValue(vars, output[0], scope)[0]}`}
-			</ListGroup.Item>
-		);
-	}
+	return output;
+}
 
+function ValueType({ newVal, setNewVal, controlPlaceholder, controlProperty }) {
 	return (
-		<>
-			<h3
-				onClick={() =>
-					selectVar(
-						vars,
-						setType,
-						setNewName,
-						setNewScope,
-						setNewValue,
-						setListData,
-						setTableData,
-						setNewValueType,
-						scope,
-						name
-					)
-				}
-			>
-				{name}
-			</h3>
-			<details>
-				<summary>Table</summary>
-				<Table bordered hover size="sm">
-					<thead>
-						<tr>
-							<th className="w-25">Argument 1</th>
-							<th className="w-25">Comparison</th>
-							<th className="w-25">Argument 2</th>
-							<th className="w-25">Output</th>
-						</tr>
-					</thead>
-					<tbody>
-						{table.map((row, index) => {
-							if (index === 0) {
-								return (
-									<>
-										<tr key="default">
-											<td>DEFAULT</td>
-											<td>DEFAULT</td>
-											<td>DEFAULT</td>
-											<td
-												className={
-													outputIndex === -1 ? "bg-primary text-light" : ""
-												}
-											>
-												{row.type === "var"
-													? evalValue(vars, row.value, scope)[0]
-													: row.value}
-											</td>
-										</tr>
-										<tr key="output" className="bg-primary text-light">
-											<td>OUTPUT</td>
-											<td>OUTPUT</td>
-											<td>OUTPUT</td>
-											<td>{output[1]}</td>
-										</tr>
-									</>
-								);
-							}
-
-							return (
-								<>
-									{row.map((condition, rowIndex) => {
-										if (rowIndex === 0) {
-											return <></>;
-										}
-
-										let val1 = condition.val1;
-										let val2 = condition.val2;
-										let comparison = comparisons[condition.comparison];
-
-										if (condition.val1Type === "var") {
-											val1 = evalValue(vars, val1, scope)[0];
-										}
-
-										if (condition.val2Type === "var") {
-											val2 = evalValue(vars, val2, scope)[0];
-										}
-
-										return (
-											<tr key={rowIndex}>
-												<td>{val1}</td>
-												<td>{comparison}</td>
-												<td>{val2}</td>
-											</tr>
-										);
-									})}
-									<tr key={`${index}-output`}>
-										<td />
-										<td />
-										<td />
-										<td
-											className={
-												outputIndex === index ? "bg-primary text-light" : ""
-											}
-										>
-											{row[0].type === "var"
-												? evalValue(vars, row[0].value, scope)[0]
-												: row[0].value}
-										</td>
-									</tr>
-								</>
-							);
-						})}
-					</tbody>
-				</Table>
-			</details>
-		</>
-	);
-};
-
-const valEntry = (
-	setTableData,
-	tableData,
-	controlId,
-	buttonsName,
-	title,
-	placeholder,
-	getter,
-	setter,
-	prependId,
-	data,
-	className,
-	valKey,
-	typeKey
-) => {
-	return (
-		<Form.Group className={className} controlId={controlId}>
-			<Form.Label>{title}</Form.Label>
+		<Form.Group className="mb-3" controlId="formVarValueString">
+			<Form.Label>Value</Form.Label>
 			<Form.Control
-				value={getter(data)[valKey]}
+				value={newVal[controlProperty]}
 				onChange={(e) => {
-					const copy = [...tableData];
+					const clone = { ...newVal };
 
-					setter(copy)[valKey] = e.target.value;
-
-					setTableData(copy);
+					clone[controlProperty] = e.target.value;
+					setNewVal(clone);
 				}}
 				type="text"
-				placeholder={placeholder}
+				placeholder={controlPlaceholder}
 			/>
 			<ToggleButtonGroup
 				type="radio"
-				value={getter(data)[typeKey]}
-				onChange={(val) => {
-					const copy = [...tableData];
-
-					setter(copy)[typeKey] = val;
-
-					setTableData(copy);
-				}}
-				name={buttonsName}
+				value={refState.value}
+				onChange={(e) => setRefState({ ...refState, value: e })}
+				name="newValueType"
 				className="mb-3"
 			>
 				<ToggleButton
-					id={`${prependId}-type-literal`}
+					id="value-type-literal"
 					variant="outline-primary"
 					value="literal"
 				>
 					Literal
 				</ToggleButton>
 				<ToggleButton
-					id={`${prependId}-type-var`}
+					id="value-type-ref"
 					variant="outline-primary"
-					value="var"
+					value="reference"
 				>
-					Variable
+					Reference
 				</ToggleButton>
 			</ToggleButtonGroup>
 		</Form.Group>
 	);
-};
+}
 
 export default function Vars(props) {
-	const [rawVars, setRawVars] = useState({});
-	const [vars, setVars] = useState({});
-	const [newName, setNewName] = useState("");
-	const [newValue, setNewValue] = useState("");
-	const [newScope, setNewScope] = useState("");
-	const [scopes, setScopes] = useState([]);
-	const [guide, setGuide] = useState(null);
-	const [redirect, setRedirect] = useState(null);
+	const userVars = useRef(new UserVars());
 	const [{ search }] = useState(useLocation());
-	const [newValueType, setNewValueType] = useState("literal");
-	const [listData, setListData] = useState(["list"]);
-	const [type, setType] = useState("basic");
-	const [tableData, setTableData] = useState(tableDefault);
-
-	const perhapsAddScope = useCallback(
-		(newScope) => {
-			if (scopes.indexOf(newScope) > -1) {
-				setScopes([...scopes, newScope]);
-			}
-		},
-		[scopes]
-	);
+	const [newVal, setNewVal] = useState(defaultVals.basic);
+	const [refState, setRefState] = useState({ value: "literal" });
+	const [newListItem, setNewListItem] = useState("");
+	const [vars, setVars] = useState({});
 
 	useEffect(() => {
-		const params = new URLSearchParams(search);
-
-		if (!guide) {
-			setGuide(params.get("guide"));
-		}
-	}, [search, guide]);
-
-	useEffect(() => {
-		const params = new URLSearchParams(search);
-
-		if (params.get("guide")) {
-			return;
-		}
-
 		props.db
 			.find({ include_docs: true, selector: { type: "var" } })
 			.then((results) => {
-				const newRawVars = {};
-
-				results.docs.forEach(async (doc) => {
-					if (!doc.name) {
-						const newDoc = { ...doc };
-
-						newDoc.name = doc._id;
-						await props.db.put(newDoc);
-
-						doc.name = doc._id;
-					}
-
-					if (!doc.scope) {
-						props.db.put({ ...doc, scope: "global" });
-
-						doc.scope = "global";
-					}
-
-					if (!doc.varType) {
-						if (typeof doc.value === "string") {
-							doc.basicType = "literal";
-							doc.varType = "basic";
-						} else if (doc.value[0] === "list") {
-							doc.value = doc.value.filter((item) => item !== "list");
-							doc.varType = "list";
-						} else {
-							doc.varType = "table";
-						}
-					}
-
-					newRawVars[doc.scope] = {
-						...newRawVars[doc.scope],
-						[doc.name]: { value: doc.value, varType: doc.varType }
-					};
-
-					if (doc.basicType) {
-						newRawVars[doc.scope][doc.name].basicType = doc.basicType;
-					}
-
-					if (newRawVars[doc.scope][doc.name].varType === "table") {
-						newRawVars[doc.scope][doc.name].value[0].scope = doc.scope;
-					}
-
-					perhapsAddScope(doc.scope);
-				});
-
-				setRawVars({ ...newRawVars });
-
-				const newVars = {};
-
-				console.log(newRawVars);
-
-				Object.keys(newRawVars).forEach((key) => {
-					newVars[key] = {};
-
-					Object.keys(newRawVars[key]).forEach((item) => {
-						newVars[key][item] = newRawVars[key][item].value;
-					});
-				});
-
-				console.log(newVars);
-
-				setVars(newVars);
-		});
-	}, [props.db, perhapsAddScope, guide, search]);
-
-	useEffect(() => {
-		if (guide) {
-			if (guide.startsWith("/create")) {
-				setRedirect(guide);
-			} else if (guide === "v1") {
-				setVars({ global: { example: "6", example2: "12" } });
-			} else if (guide === "s1") {
-				setVars({
-					global: { example: "6", example2: "12" },
-					scope1: { example: "24", example2: "36", example3: "72" }
-				});
-			}
-		}
-	}, [guide]);
-
-	useEffect(() => {
-		if (type === "basic") {
-			setTableData(tableDefault);
-			setListData(["list"]);
-		} else if (type === "table") {
-			setNewValue("");
-			setListData(["list"]);
-		} else if (type === "list") {
-			setNewValue("");
-			setTableData(tableDefault);
-		}
-	}, [type]);
+				userVars.current.setVarBulk(...results.docs);
+				const evaluated = userVars.current.getAllVars(false, true);
+				setVars(formatVars(evaluated));
+			});
+	}, [props.db]);
 
 	return (
 		<Container>
-			{redirect && <Navigate to={redirect} />}
-			<OverlayTrigger
-				placement="bottom"
-				overlay={popover(setGuide)(
-					"Engine",
-					"This application uses the <a href='https://handlebarsjs.com/'>Handlebars</a> templating engine for inserting variables, and supports all of its features",
-					null,
-					"v2"
-				)}
-				show={guide === "v1"}
-			>
-				<div />
-			</OverlayTrigger>
 			<Form
-				onSubmit={(e) => {
-					e.preventDefault();
-
-					if (type === "basic") {
-						addVar(
-							newScope,
-							newName,
-							scopes,
-							vars,
-							{ value: newValue, varType: "basic", basicType: newValueType },
-							props.db,
-							setVars,
-							setNewName,
-							setNewValue
-						);
-					} else if (type === "table") {
-						addTable(
-							newScope,
-							newName,
-							scopes,
-							tableData,
-							props.db,
-							vars,
-							setVars,
-							setNewName,
-							setNewScope,
-							setTableData
-						);
-					}
-				}}
+				onSubmit={submitVar(
+					newVal,
+					setNewVal,
+					userVars,
+					vars,
+					setVars,
+					props.db,
+					refState,
+					setRefState
+				)}
 			>
-				<OverlayTrigger
-					placement="bottom"
-					overlay={popover(setGuide)(
-						"Name",
-						"This is how you'll refer to your variable in the content of documents. Entering the name of an existing variable will edit that variable",
-						"v1",
-						"v3"
-					)}
-					show={guide === "v2"}
-				>
-					<Form.Group className="mb-3" controlId="formBasicVarName">
-						<Form.Label>Name</Form.Label>
-						<Form.Control
-							value={newName}
-							onChange={(e) => setNewName(e.target.value)}
-							type="text"
-							placeholder="Name"
-						/>
-					</Form.Group>
-				</OverlayTrigger>
-				<OverlayTrigger
-					placement="bottom"
-					overlay={popover(setGuide)(
-						"Scope",
-						"Variables can have the same name as long as they're in different scopes. Defaults to 'global'",
-						null,
-						"/create?guide=s2"
-					)}
-					show={guide === "s1"}
-				>
-					<Form.Group className="mb-3" controlId="formBasicVarScopes">
-						<Form.Label>Scope</Form.Label>
-						<Form.Control
-							value={newScope}
-							onChange={(e) => setNewScope(e.target.value)}
-							type="text"
-							placeholder="Scope"
-						/>
-					</Form.Group>
-				</OverlayTrigger>
+				<Form.Group className="mb-3" controlId="formVarName">
+					<Form.Label>Name</Form.Label>
+					<Form.Control
+						value={newVal.name}
+						onChange={(e) => {
+							setNewVal({ ...newVal, name: e.target.value });
+						}}
+						type="text"
+						placeholder="Name"
+					/>
+				</Form.Group>
+				<Form.Group className="mb-3" controlId="formVarScope">
+					<Form.Label>Scope</Form.Label>
+					<Form.Control
+						value={newVal.scope}
+						onChange={(e) => setNewVal({ ...newVal, scope: e.target.value })}
+						type="text"
+						placeholder="global"
+					/>
+				</Form.Group>
 				<Form.Label>Type</Form.Label>
 				<br />
 				<ToggleButtonGroup
 					type="radio"
-					value={type}
-					onChange={(val) => {
-						setType(val);
-					}}
-					name="isTable"
+					value={newVal.varType}
+					onChange={(val) => setNewVal({ ...newVal, varType: val })}
+					name="varType"
 					className="mb-2"
 				>
 					<ToggleButton
@@ -902,6 +299,9 @@ export default function Vars(props) {
 					>
 						Basic
 					</ToggleButton>
+					<ToggleButton id="option-list" variant="outline-primary" value="list">
+						List
+					</ToggleButton>
 					<ToggleButton
 						id="option-table"
 						variant="outline-primary"
@@ -909,558 +309,117 @@ export default function Vars(props) {
 					>
 						Table
 					</ToggleButton>
-					<ToggleButton id="option-list" variant="outline-primary" value="list">
-						List
+					<ToggleButton
+						id="option-expression"
+						variant="outline-primary"
+						value="expression"
+					>
+						Expression
 					</ToggleButton>
 				</ToggleButtonGroup>
 				<br />
-				{type === "basic" && (
-					<OverlayTrigger
-						placement="bottom"
-						overlay={popover(setGuide)(
-							"Value",
-							"This is what will be shown wherever the variable is used",
-							"v2",
-							"v4"
-						)}
-						show={guide === "v3"}
-					>
-						<Form.Group className="mb-3" controlId="formBasicVarValue">
-							<Form.Label>Value</Form.Label>
-							<Form.Control
-								value={newValue}
-								onChange={(e) => setNewValue(e.target.value)}
-								type="text"
-								placeholder="Value"
-							/>
-							<ToggleButtonGroup
-								type="radio"
-								value={newValueType}
-								onChange={setNewValueType}
-								name="newValueType"
-								className="mb-3"
-							>
-								<ToggleButton
-									id="value-type-literal"
-									variant="outline-primary"
-									value="literal"
-								>
-									Literal
-								</ToggleButton>
-								<ToggleButton
-									id="value-type-var"
-									variant="outline-primary"
-									value="var"
-								>
-									Variable
-								</ToggleButton>
-							</ToggleButtonGroup>
-						</Form.Group>
-					</OverlayTrigger>
-				)}
-				{type === "table" && (
-					<>
-						<Form.Label>Priority</Form.Label>
-						<br />
+				{["basic", "expression"].includes(newVal.varType) && (
+					<Form.Group className="mb-3" controlId="formVarValueString">
+						<Form.Label>Value</Form.Label>
+						<Form.Control
+							value={newVal.value}
+							onChange={(e) => setNewVal({ ...newVal, value: e.target.value })}
+							type="text"
+							placeholder="Value"
+						/>
 						<ToggleButtonGroup
 							type="radio"
-							value={tableData[0].priority}
-							onChange={(val) => {
-								const copy = [...tableData];
-
-								copy[0].priority = val;
-
-								setTableData(copy);
-							}}
-							name="priority"
-							className="mb-2"
+							value={refState.value}
+							onChange={(e) => setRefState({ ...refState, value: e })}
+							name="newValueType"
+							className="mb-3"
 						>
 							<ToggleButton
-								id="option-priority-last"
+								id="value-type-literal"
 								variant="outline-primary"
-								value="last"
+								value="literal"
 							>
-								Last
+								Literal
 							</ToggleButton>
 							<ToggleButton
-								id="option-priority-first"
+								id="value-type-ref"
 								variant="outline-primary"
-								value="first"
+								value="reference"
 							>
-								First
+								Reference
 							</ToggleButton>
 						</ToggleButtonGroup>
-						<br />
-						{valEntry(
-							setTableData,
-							tableData,
-							"formBasicTableDefault",
-							"formBasicDefaultType",
-							"Default Value",
-							"Default",
-							() => tableData[0],
-							(table) => table[0],
-							"default",
-							null,
-							"",
-							"value",
-							"type"
-						)}
-						<Button onClick={() => addRow(setTableData, tableData)}>
-							Add Output
-						</Button>
-						{tableData.map((row, index) => {
-							if (index === 0) return null;
-							return (
-								<Card key={index}>
-									<Card.Header>
-										Output {index}
-										<Button
-											className="float-end"
-											onClick={() => {
-												const copy = [...tableData];
-
-												copy.splice(index, 1);
-
-												setTableData(copy);
-											}}
-										>
-											Delete Output
-										</Button>
-									</Card.Header>
-									<Button
-										className="w-25"
-										onClick={() => addCondition(tableData, index, setTableData)}
-									>
-										Add Condition
-									</Button>
-									{row.map((item, rowIndex) => {
-										if (rowIndex === 0) return <></>;
-
-										return (
-											<div key={rowIndex}>
-												{valEntry(
-													setTableData,
-													tableData,
-													`formBasic${index}${rowIndex}Val1`,
-													`formBasic${index}${rowIndex}Val1Type`,
-													"Value 1",
-													"Value 1",
-													(data) => data,
-													(table) => table[index][rowIndex],
-													`${index}-${rowIndex}-val1`,
-													item,
-													"w-25 float-start",
-													"val1",
-													"val1Type"
-												)}
-												<Form.Group className="w-25 float-start text-center">
-													<Form.Label>Comparison</Form.Label>
-													<br />
-													<ToggleButtonGroup
-														type="radio"
-														value={item.comparison}
-														onChange={(val) => {
-															const copy = [...tableData];
-
-															copy[index][rowIndex].comparison = val;
-
-															setTableData(copy);
-														}}
-														name={`formBasic${index}${rowIndex}Comparison`}
-														className="mb-3"
-													>
-														<ToggleButton
-															id={`compare-eq-${index}-${rowIndex}`}
-															variant="outline-primary"
-															value="eq"
-														>
-															==
-														</ToggleButton>
-														<ToggleButton
-															id={`compare-lt-${index}-${rowIndex}`}
-															variant="outline-primary"
-															value="lt"
-														>
-															{"<"}
-														</ToggleButton>
-														<ToggleButton
-															id={`compare-gt-${index}-${rowIndex}`}
-															variant="outline-primary"
-															value="gt"
-														>
-															{">"}
-														</ToggleButton>
-														<ToggleButton
-															id={`compare-in-${index}-${rowIndex}`}
-															variant="outline-primary"
-															value="isin"
-														>
-															in
-														</ToggleButton>
-													</ToggleButtonGroup>
-												</Form.Group>
-												{valEntry(
-													setTableData,
-													tableData,
-													`formBasic${index}${rowIndex}Val2`,
-													`formBasic${index}${rowIndex}Val2Type`,
-													"Value 2",
-													"Value 2",
-													(data) => data,
-													(table) => table[index][rowIndex],
-													`${index}-${rowIndex}-val2`,
-													item,
-													"w-25 float-start",
-													"val2",
-													"val2Type"
-												)}
-												<Form.Group className="w-25 float-start text-end">
-													<Form.Label>&nbsp;</Form.Label>
-													<br />
-													<Button
-														className="me-3"
-														onClick={() => {
-															const copy = [...tableData];
-
-															copy[index].splice(rowIndex, 1);
-
-															setTableData(copy);
-														}}
-													>
-														Delete Condition
-													</Button>
-												</Form.Group>
-											</div>
-										);
-									})}
-									{valEntry(
-										setTableData,
-										tableData,
-										`formBasic${index}Output`,
-										`formBasic${index}ValueType`,
-										"Output",
-										"Output",
-										(data) => data[0],
-										(table) => table[index][0],
-										`${index}-output`,
-										row,
-										"w-25",
-										"value",
-										"type"
-									)}
-								</Card>
-							);
-						})}
-						<br />
-					</>
+					</Form.Group>
 				)}
-				{type !== "list" && (
+				{newVal.varType !== "list" && (
 					<Button className="my-3" type="submit">
-						Add
+						Create
 					</Button>
 				)}
 			</Form>
-			{type === "list" && (
-				<>
-					<Form
-						onSubmit={(e) => {
-							e.preventDefault();
-
-							const copy = [...listData];
-							copy.push([newValue, newValueType]);
-
-							setListData(copy);
-							setNewValue("");
-						}}
-					>
-						<Form.Group controlId="newListItem">
-							<Form.Label>New Item</Form.Label>
-							<Form.Control
-								value={newValue}
-								onChange={(e) => {
-									setNewValue(e.target.value);
-								}}
-								type="text"
-								placeholder="Value"
-							/>
-							<ToggleButtonGroup
-								type="radio"
-								value={newValueType}
-								onChange={setNewValueType}
-								name="newListItemType"
-								className="mb-3"
+			{newVal.varType === "list" && (
+				<Form>
+					<Form.Group controlId="newListItem">
+						<Form.Label>New Item</Form.Label>
+						<Form.Control
+							value={newListItem}
+							onChange={(e) => setNewListItem(e.target.value)}
+							type="text"
+							placeholder="Value"
+						/>
+						<ToggleButtonGroup
+							type="radio"
+							value={refState.value}
+							onChange={(e) => setRefState({ ...refState, value: e })}
+							name="newListItemType"
+							className="mb-3"
+						>
+							<ToggleButton
+								id="list-item-type-literal"
+								variant="outline-primary"
+								value="literal"
 							>
-								<ToggleButton
-									id="list-item-type-literal"
-									variant="outline-primary"
-									value="literal"
-								>
-									Literal
-								</ToggleButton>
-								<ToggleButton
-									id="list-item-type-var"
-									variant="outline-primary"
-									value="var"
-								>
-									Variable
-								</ToggleButton>
-							</ToggleButtonGroup>
-							<br />
-							<Button type="submit" className="float-none">
-								Add Item
-							</Button>
-						</Form.Group>
-					</Form>
-					<ListGroup>
-						<h2>Items</h2>
-						{listData.map((item, index) => {
-							return (
-								<ListGroup.Item
-									action
-									onClick={() => {
-										const output = listData.filter((_, i) => i !== index);
-										setListData(output);
-									}}
-									key={index}
-								>
-									{item[1] === "literal" && item[0]}
-									{item[1] === "var" &&
-										evalValue(vars, item[0], newScope || "global")[0]}
-									{item[1] !== "literal" &&
-										item[1] !== "var" &&
-										`${item[0]} (invalid)`}
-								</ListGroup.Item>
-							);
-						})}
-					</ListGroup>
-					<Button
-						className="my-3"
-						onClick={(e) => {
-							e.preventDefault();
-
-							addList(
-								newScope,
-								newName,
-								vars,
-								scopes,
-								props.db,
-								listData,
-								setVars,
-								setNewName,
-								setNewScope,
-								setNewValue,
-								setListData
-							);
-						}}
-					>
-						Add
-					</Button>
-					<br />
-				</>
-			)}
-			<OverlayTrigger
-				placement="top"
-				overlay={popover(setGuide)(
-					"Variable List",
-					"Here is where all the variables you add will show up. You can click one to edit it, and after that you can delete it by saving it with an empty value",
-					"v3",
-					"/create?guide=v5"
-				)}
-				show={guide === "v4"}
-			>
-				<h3>Variable List</h3>
-			</OverlayTrigger>
-			{vars["global"] && (
-				<Card>
-					<Card.Header>global</Card.Header>
-					<ListGroup>
-						{Object.keys(vars.global).map((name) => {
-							if (rawVars.global[name].varType === "basic") {
-								// basic var
-								return (
-									<ListGroup.Item
-										key={name}
-										action
-										onClick={() =>
-											selectVar(
-												rawVars,
-												setType,
-												setNewName,
-												setNewScope,
-												setNewValue,
-												setListData,
-												setTableData,
-												setNewValueType,
-												"global",
-												name
-											)
-										}
-									>
-										{`${name}: ${
-											evalValue(vars, vars.global[name], "global")[0]
-										}`}
-									</ListGroup.Item>
-								);
-							} else if (rawVars.global[name].varType === "list") {
-								// list var
-								return (
-									<ListGroup.Item key={name}>
-										<h3
-											onClick={() =>
-												selectVar(
-													rawVars,
-													setType,
-													setNewName,
-													setNewScope,
-													setNewValue,
-													setListData,
-													setTableData,
-													setNewValueType,
-													"global",
-													name
-												)
-											}
-										>
-											{name}
-										</h3>
-										<details>
-											<summary>List</summary>
-											<ListGroup>
-												{rawVars.global[name].map((item, index) => {
-													if (index === 0) return <></>;
-
-													let val = item[0];
-
-													if (item[1] === "var") {
-														val = evalValue(vars, val, "global")[0];
-													}
-
-													return <ListGroup.Item>{val}</ListGroup.Item>;
-												})}
-											</ListGroup>
-										</details>
-									</ListGroup.Item>
-								);
-							} else if (rawVars.global[name].varType === "table") {
-								// table var
-								return (
-									<ListGroup.Item key={name}>
-										{listTable(
-											rawVars,
-											"global",
-											name,
-											vars.global[name].value,
-											setType,
-											setNewName,
-											setNewScope,
-											setNewValue,
-											setListData,
-											setTableData,
-											setNewValueType
-										)}
-									</ListGroup.Item>
-								);
-							}
-
-							return <ListGroup.Item>Missing</ListGroup.Item>;
-						})}
-					</ListGroup>
-				</Card>
+								Literal
+							</ToggleButton>
+							<ToggleButton
+								id="list-item-type-var"
+								variant="outline-primary"
+								value="var"
+							>
+								Variable
+							</ToggleButton>
+						</ToggleButtonGroup>
+					</Form.Group>
+				</Form>
 			)}
 			{Object.keys(vars).length > 0 &&
-				Object.keys(vars).map((key) => {
-					if (key === "global") return <></>;
-
+				Object.keys(vars).map((scope) => {
 					return (
-						<Card key={key}>
-							<Card.Header>{key}</Card.Header>
+						<Card key={scope}>
+							<Card.Header>{scope}</Card.Header>
 							<ListGroup>
-								{Object.keys(vars[key]).map((name) => {
-									if (rawVars[key][name].varType === "basic") {
-										// basic var
+								{Object.keys(vars[scope]).map((name) => {
+									const current = vars[scope][name];
+
+									if (typeof current === "string") {
 										return (
 											<ListGroup.Item
 												key={name}
 												action
-												onClick={() =>
-													selectVar(
-														rawVars,
-														setType,
-														setNewName,
-														setNewScope,
-														setNewValue,
-														setListData,
-														setTableData,
-														setNewValueType,
-														key,
-														name
-													)
-												}
+												onClick={() => {
+													const rawVar = userVars.current.getRawVar(
+														`${scope}.${name}`
+													);
+
+													if (rawVar.scope === "global") rawVar.scope = "";
+
+													setNewVal(rawVar);
+												}}
 											>
-												{`${name}: ${evalValue(vars, vars[key][name], key)[0]}`}
-											</ListGroup.Item>
-										);
-									} else if (rawVars[key][name].varType === "list") {
-										// list var
-										return (
-											<ListGroup.Item key={name}>
-												<h3
-													onClick={() =>
-														selectVar(
-															rawVars,
-															setType,
-															setNewName,
-															setNewScope,
-															setNewValue,
-															setListData,
-															setTableData,
-															setNewValueType,
-															key,
-															name
-														)
-													}
-												>
-													{name}
-												</h3>
-												<details>
-													<summary>List</summary>
-													<ListGroup>
-														{rawVars[key][name].map((item) => {
-															let val = item;
-
-															if (val === "var") {
-																val = evalValue(val, key)[0];
-															}
-
-															return <ListGroup.Item>{val}</ListGroup.Item>;
-														})}
-													</ListGroup>
-												</details>
-											</ListGroup.Item>
-										);
-									} else if (rawVars[key][name].varType === "table") {
-										// table var
-										return (
-											<ListGroup.Item key={name}>
-												{listTable(
-													rawVars,
-													key,
-													name,
-													vars[key][name],
-													setType,
-													setNewName,
-													setNewScope,
-													setNewValue,
-													setListData,
-													setTableData,
-													setNewValueType
-												)}
+												{`${name}: ${current}`}
 											</ListGroup.Item>
 										);
 									}
-
-									return <ListGroup.Item>Missing</ListGroup.Item>;
 								})}
 							</ListGroup>
 						</Card>
