@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { UserVars } from "uservars";
+import { get, set } from "lodash";
 
 import { NotificationManager } from "react-notifications";
 
@@ -116,9 +117,7 @@ function submitVar(
 	userVars,
 	vars,
 	setVars,
-	db,
-	refState,
-	setRefState
+	db
 ) {
 	return async (e) => {
 		e.preventDefault();
@@ -190,16 +189,18 @@ function formatVars(evaluated) {
 	return output;
 }
 
-function ValueType({ newVal, setNewVal, controlPlaceholder, controlProperty }) {
+function ValueType({ newVal, setNewVal, controlPlaceholder, valuePath, typePath, idPrefix }) {
+
+
 	return (
 		<Form.Group className="mb-3" controlId="formVarValueString">
 			<Form.Label>Value</Form.Label>
 			<Form.Control
-				value={newVal[controlProperty]}
+				value={get(newVal, valuePath)}
 				onChange={(e) => {
 					const clone = { ...newVal };
 
-					clone[controlProperty] = e.target.value;
+					set(clone, valuePath, e.target.value);
 					setNewVal(clone);
 				}}
 				type="text"
@@ -207,24 +208,36 @@ function ValueType({ newVal, setNewVal, controlPlaceholder, controlProperty }) {
 			/>
 			<ToggleButtonGroup
 				type="radio"
-				value={refState.value}
-				onChange={(e) => setRefState({ ...refState, value: e })}
+				value={get(newVal, typePath)}
+				onChange={(e) => {
+					const clone = { ...newVal };
+
+					set(clone, typePath, e.target.value);
+					setNewVal(clone);
+				}}
 				name="newValueType"
 				className="mb-3"
 			>
 				<ToggleButton
-					id="value-type-literal"
+					id={`${idPrefix}-type-literal`}
 					variant="outline-primary"
 					value="literal"
 				>
 					Literal
 				</ToggleButton>
 				<ToggleButton
-					id="value-type-ref"
+					id={`${idPrefix}-type-ref`}
 					variant="outline-primary"
 					value="reference"
 				>
 					Reference
+				</ToggleButton>
+				<ToggleButton
+					id={`${idPrefix}-type-expr`}
+					variant="outline-primary"
+					value="expression"
+				>
+					Expression
 				</ToggleButton>
 			</ToggleButtonGroup>
 		</Form.Group>
@@ -235,9 +248,9 @@ export default function Vars(props) {
 	const userVars = useRef(new UserVars());
 	const [{ search }] = useState(useLocation());
 	const [newVal, setNewVal] = useState(defaultVals.basic);
-	const [refState, setRefState] = useState({ value: "literal" });
 	const [newListItem, setNewListItem] = useState("");
 	const [vars, setVars] = useState({});
+	const [basicTypeToggle] = useState(ValueType(newVal, setNewVal, ""))
 
 	useEffect(() => {
 		props.db
@@ -347,6 +360,13 @@ export default function Vars(props) {
 								value="reference"
 							>
 								Reference
+							</ToggleButton>
+							<ToggleButton
+								id="value-type-expr"
+								variant="outline-primary"
+								value="expression"
+							>
+								Expression
 							</ToggleButton>
 						</ToggleButtonGroup>
 					</Form.Group>
