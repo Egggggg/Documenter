@@ -220,7 +220,7 @@ function ValueType({
         onChange={(e) => {
           const clone = { ...newVal };
 
-          set(clone, typePath, e.target.value);
+          set(clone, typePath, e);
           setNewVal(clone);
         }}
         name={`${idPrefix}Type`}
@@ -259,7 +259,7 @@ function useUserVars() {
 
   const setVar = (...newVars) => {
     const success = userVars.current.setVarBulk(...newVars);
-    setVars(userVars.current.getAllVars());
+    setVars(userVars.current.getAllVars(false));
     setRawVars(userVars.current.vars);
 
     console.log(vars);
@@ -364,18 +364,6 @@ export default function Vars(props) {
       </Form>
       {newVal.varType === "list" && (
         <>
-          <Button
-            className="my-3"
-            onClick={() => {
-              console.log(newVal);
-              const clone = { ...newVal };
-
-              clone.value.push({ ...defaultVals.literal });
-              setNewVal(clone);
-            }}
-          >
-            Add Item
-          </Button>
           {newVal.value.map((_, i) => {
             console.log(i);
             return (
@@ -390,6 +378,18 @@ export default function Vars(props) {
               />
             );
           })}
+          <Button
+              className="my-3"
+              onClick={() => {
+                console.log(newVal);
+                const clone = { ...newVal };
+
+                clone.value.push({ ...defaultVals.literal });
+                setNewVal(clone);
+              }}
+          >
+            Add Item
+          </Button>
         </>
       )}
       {Object.keys(userVars.vars).length > 0 &&
@@ -399,11 +399,7 @@ export default function Vars(props) {
               <Card.Header>{scope}</Card.Header>
               <ListGroup>
                 {Object.keys(userVars.vars[scope]).map((name) => {
-                  console.log(userVars.vars);
-                  console.log(userVars.rawVars);
-                  console.log(userVars.current.getAllVars());
-                  console.log(`${scope}.${name}`);
-                  const current = userVars.current.getRawVar(
+                  const current = userVars.current.getVar(
                     `${scope}.${name}`
                   );
 
@@ -412,16 +408,15 @@ export default function Vars(props) {
                       key={name}
                       action
                       onClick={() => {
-                        const rawVar = userVars.current.getRawVar(
-                          `${scope}.${name}`
-                        );
+                        const rawVar = userVars.current.getRawVar(`${scope}.${name}`);
 
                         if (rawVar.scope === "global") rawVar.scope = "";
 
                         setNewVal(rawVar);
                       }}
                     >
-                      {`${name}: ${current}`}
+                      {typeof current === "string" && `${name}: ${current}`}
+                      {current instanceof Array && `${name}: [${current.join(",\n")}]`}
                     </ListGroup.Item>
                   );
                 })}

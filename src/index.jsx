@@ -135,6 +135,8 @@ db.createIndex({
 		})
 	);
 
+document.documentElement.setAttribute("data-color-mode", "light");
+
 ReactDOM.render(
 	<HashRouter>
 		<Routes>
