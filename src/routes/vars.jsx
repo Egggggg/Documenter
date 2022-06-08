@@ -104,21 +104,14 @@ async function storeVar(value, db) {
 		selector: { type: "var", scope: value.scope, name: value.name }
 	});
 
-	if (!value.value && existing.docs.length > 0) {
+	if (!value.value.value && existing.docs.length > 0) {
 		db.remove(existing.docs[0]);
 		return;
 	}
 
 	const data = {
-		name: value.name,
-		scope: value.scope,
-		value: value.value,
-		type: "var",
-		varType: value.varType,
-		default: value.default,
-		priority: value.priority,
-		vars: value.vars,
-		functions: value.functions
+		...value,
+		type: "var"
 	};
 
 	if (existing.docs.length > 0) {
@@ -140,12 +133,8 @@ function submitVar(newValObject, setNewVal, userVars, db) {
 
 		if (newVal.scope === "") newVal.scope = "global";
 
-		console.log(defaultVals);
-
 		try {
 			let success = userVars.setVar(newVal);
-
-			console.log(userVars.vars);
 
 			if (!success[0]) {
 				NotificationManager.error(
@@ -246,11 +235,10 @@ export default function Vars(props) {
 	const userVars = useUserVars();
 	const [{ search }] = useState(useLocation());
 	const [newVal, setNewVal] = useState(structuredClone(defaultVals.basic));
-	const [newListItem, setNewListItem] = useState("");
 	const initialized = useRef(false);
 
 	useEffect(() => {
-		if (!initialized) {
+		if (!initialized.current) {
 			props.db
 				.find({ include_docs: true, selector: { type: "var" } })
 				.then((results) => {
@@ -259,7 +247,7 @@ export default function Vars(props) {
 
 			initialized.current = true;
 		}
-	}, [props.db]);
+	}, [props.db, userVars]);
 
 	return (
 		<Container>
@@ -289,7 +277,7 @@ export default function Vars(props) {
 				<ToggleButtonGroup
 					type="radio"
 					value={newVal.varType}
-					onChange={(val) => setNewVal(structuredClone(defaultVals[val]))}
+					onChange={(val) => setNewVal({ ...structuredClone(defaultVals[val]), name: newVal.name, scope: newVal.scope})}
 					name="varType"
 					className="mb-2"
 				>
@@ -337,7 +325,6 @@ export default function Vars(props) {
 			{newVal.varType === "list" && (
 				<>
 					{newVal.value.map((_, i) => {
-						console.log(i);
 						return (
 							<ValueType
 								key={i}
@@ -371,7 +358,7 @@ export default function Vars(props) {
 							<Card.Header>{scope}</Card.Header>
 							<ListGroup>
 								{Object.keys(userVars.vars[scope]).map((name) => {
-									const current = userVars.current.getVar(`${scope}.${name}`);
+									const current = userVars.vars[scope][name];
 
 									const currentRaw = userVars.current.getRawVar(
 										`${scope}.${name}`
@@ -379,7 +366,7 @@ export default function Vars(props) {
 
 									return (
 										<ListGroup.Item
-											key={name}
+											key={`${name}-${current}`}
 											action
 											onClick={() => {
 												const rawVar = userVars.current.getRawVar(
@@ -393,12 +380,14 @@ export default function Vars(props) {
 										>
 											{currentRaw.varType === "basic" &&
 												currentRaw.value.type === "literal" &&
+												typeof current === "string" &&
 												`${name}: ${current}`}
 											{currentRaw.varType === "basic" &&
 												currentRaw.value.type !== "literal" &&
+												typeof current === "string" &&
 												`${name}: ${currentRaw.value.value} (${current})`}
 											{currentRaw.varType === "list" &&
-												`${name}: [${current.join(",\n")}]`}
+												`${name}: [${current.join(", ")}]`}
 										</ListGroup.Item>
 									);
 								})}
