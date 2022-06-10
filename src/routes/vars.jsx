@@ -1,7 +1,10 @@
-import { useRef, useState, useEffect } from "react";
+import {useRef, useState, useEffect, useMemo} from "react";
 import { useLocation } from "react-router-dom";
 import { UserVars } from "uservars";
 import { get, set } from "lodash";
+
+import copy from "../img/copy.svg";
+import "../css/style.css";
 
 import { NotificationManager } from "react-notifications";
 
@@ -77,6 +80,15 @@ const defaultVals = {
 	literal: {
 		value: "",
 		type: "literal"
+	},
+	reference: {
+		value: "",
+		type: "reference"
+	},
+	inlineExpression: {
+		value: "",
+		vars: {},
+		type: "expression"
 	}
 };
 
@@ -150,28 +162,29 @@ function submitVar(newValObject, setNewVal, userVars, db) {
 			NotificationManager.success("Variable created");
 		} catch (err) {
 			NotificationManager.error(err.toString(), "An error occurred");
+			throw err;
 		}
 	};
 }
 
-function ValueType({
+function ValueInput({
 	newVal,
 	setNewVal,
 	controlPlaceholder,
 	valuePath,
-	typePath,
 	idPrefix,
-	titleText
+	titleText,
+	includeExpr = true
 }) {
 	return (
 		<Form.Group className="mb-3" controlId={`formVar${idPrefix}`}>
 			{Boolean(titleText) && <Form.Label>{titleText}</Form.Label>}
 			<Form.Control
-				value={get(newVal, valuePath)}
+				value={get(newVal, `${valuePath}.value`)}
 				onChange={(e) => {
 					const clone = structuredClone(newVal);
 
-					set(clone, valuePath, e.target.value);
+					set(clone, `${valuePath}.value`, e.target.value);
 					setNewVal(clone);
 				}}
 				type="text"
@@ -179,11 +192,17 @@ function ValueType({
 			/>
 			<ToggleButtonGroup
 				type="radio"
-				value={get(newVal, typePath, "literal")}
+				value={get(newVal, `${valuePath}.type`, "literal")}
 				onChange={(e) => {
 					const clone = structuredClone(newVal);
 
-					set(clone, typePath, e);
+					if (e === "expression") {
+						set(clone, `${valuePath}.vars`, {});
+					} else {
+						set(clone, `${valuePath}.vars`, null);
+					}
+
+					set(clone, `${valuePath}.type`, e);
 					setNewVal(clone);
 				}}
 				name={`${idPrefix}Type`}
@@ -203,13 +222,15 @@ function ValueType({
 				>
 					Reference
 				</ToggleButton>
-				<ToggleButton
-					id={`${idPrefix}-type-expr`}
-					variant="outline-primary"
-					value="expression"
-				>
-					Expression
-				</ToggleButton>
+				{includeExpr &&
+					<ToggleButton
+						id={`${idPrefix}-type-expr`}
+						variant="outline-primary"
+						value="expression"
+					>
+						Expression
+					</ToggleButton>
+				}
 			</ToggleButtonGroup>
 		</Form.Group>
 	);
@@ -231,11 +252,90 @@ function useUserVars() {
 	return { rawVars, vars, setVar, current: userVars.current };
 }
 
+function VarDisplay({ raw, evaluated, setCopied }) {
+	if (raw.varType === "basic") {
+		if (raw.value.type === "literal") {
+			return (
+				<>
+					<PathDisplay path={raw.name} setCopied={setCopied} />:{" "}
+					<ValueDisplay value={evaluated} setCopied={setCopied}>{evaluated}</ValueDisplay>
+				</>
+			);
+		} else {
+			if (typeof evaluated === "string") {
+				return (
+					<>
+						<PathDisplay path={raw.name} setCopied={setCopied} />:{" "}
+						<ValueDisplay value={evaluated} setCopied={setCopied}>{raw.value.value} ({evaluated})</ValueDisplay>
+					</>
+				);
+			} else {
+				return `${raw.name}: ${raw.value.value} ([${evaluated.join(", ")}])`;
+			}
+		}
+	} else if (raw.varType === "list") {
+
+	}
+}
+
+function PathDisplay({ path, setCopied }) {
+	const [showCopy, setShowCopy] = useState(false);
+
+	return (
+		<span
+			tabIndex={0}
+			onFocus={() => setShowCopy(true)}
+			onBlur={() => setShowCopy(false)}
+			className={"value-path"}
+		>
+			<img
+				src={copy}
+				className={"copy"}
+				onClick={() => copyPath(path, setCopied)}
+				hidden={!showCopy}
+				alt={"Copy"}
+			/>
+			{" "}{path}
+		</span>
+	);
+}
+
+function ValueDisplay({ evaluated, children, setCopied }) {
+	const [showCopy, setShowCopy] = useState(false);
+
+	return (
+		<span
+			tabIndex={0}
+			onFocus={() => { setShowCopy(true)}}
+			onBlur={() => setShowCopy(false)}
+			className={"pe-5 value-path"}
+		>
+			{children}{" "}
+			<img
+				src={copy}
+				className={"copy"}
+				onClick={() => copyValue(evaluated, setCopied)}
+				hidden={!showCopy}
+				alt={"Copy"}
+			/>
+		</span>
+	)
+}
+
+function copyPath(path, setCopied) {
+	setCopied({type: "path", value: path});
+}
+
+function copyValue(value, setCopied) {
+	setCopied({type: "value", value: value});
+}
+
 export default function Vars(props) {
 	const userVars = useUserVars();
 	const [{ search }] = useState(useLocation());
 	const [newVal, setNewVal] = useState(structuredClone(defaultVals.basic));
 	const initialized = useRef(false);
+	let [copied, setCopied] = useState({});
 
 	useEffect(() => {
 		if (!initialized.current) {
@@ -267,7 +367,9 @@ export default function Vars(props) {
 					<Form.Label>Scope</Form.Label>
 					<Form.Control
 						value={newVal.scope}
-						onChange={(e) => setNewVal({ ...newVal, scope: e.target.value })}
+						onChange={(e) => {
+							setNewVal({ ...newVal, scope: e.target.value })
+						}}
 						type="text"
 						placeholder="global"
 					/>
@@ -308,12 +410,11 @@ export default function Vars(props) {
 				</ToggleButtonGroup>
 				<br />
 				{["basic", "expression"].includes(newVal.varType) && (
-					<ValueType
+					<ValueInput
 						newVal={newVal}
 						setNewVal={setNewVal}
 						controlPlaceholder={"Value"}
-						typePath={"value.type"}
-						valuePath={"value.value"}
+						valuePath={"value"}
 						idPrefix={"value"}
 						titleText={"Value"}
 					/>
@@ -326,13 +427,12 @@ export default function Vars(props) {
 				<>
 					{newVal.value.map((_, i) => {
 						return (
-							<ValueType
+							<ValueInput
 								key={i}
 								newVal={newVal}
 								setNewVal={setNewVal}
 								controlPlaceholder={"Value"}
-								typePath={`value[${i}].type`}
-								valuePath={`value[${i}].value`}
+								valuePath={`value[${i}]`}
 								idPrefix={`value${i}`}
 							/>
 						);
@@ -340,7 +440,6 @@ export default function Vars(props) {
 					<Button
 						className="my-3"
 						onClick={() => {
-							console.log(newVal);
 							const clone = { ...newVal };
 
 							clone.value.push(structuredClone(defaultVals.literal));
@@ -352,12 +451,25 @@ export default function Vars(props) {
 				</>
 			)}
 			{Object.keys(userVars.vars).length > 0 &&
-				Object.keys(userVars.vars).map((scope) => {
+				Object.keys(userVars.vars).sort((a, b) => {
+					if (a === "global") {
+						return -1;
+					} else {
+						a = a.toLowerCase();
+						b = b.toLowerCase();
+
+						if (a > b) {
+							return 1;
+						} else {
+							return -1;
+						}
+					}
+				}).map((scope) => {
 					return (
-						<Card key={scope}>
+						<Card key={scope} className={"my-3"}>
 							<Card.Header>{scope}</Card.Header>
 							<ListGroup>
-								{Object.keys(userVars.vars[scope]).map((name) => {
+								{Object.keys(userVars.vars[scope]).sort().map((name) => {
 									const current = userVars.vars[scope][name];
 
 									const currentRaw = userVars.current.getRawVar(
@@ -366,7 +478,7 @@ export default function Vars(props) {
 
 									return (
 										<ListGroup.Item
-											key={`${name}-${current}`}
+											key={`${name}-${currentRaw.value.value}-${current}`}
 											action
 											onClick={() => {
 												const rawVar = userVars.current.getRawVar(
@@ -378,16 +490,7 @@ export default function Vars(props) {
 												setNewVal(rawVar);
 											}}
 										>
-											{currentRaw.varType === "basic" &&
-												currentRaw.value.type === "literal" &&
-												typeof current === "string" &&
-												`${name}: ${current}`}
-											{currentRaw.varType === "basic" &&
-												currentRaw.value.type !== "literal" &&
-												typeof current === "string" &&
-												`${name}: ${currentRaw.value.value} (${current})`}
-											{currentRaw.varType === "list" &&
-												`${name}: [${current.join(", ")}]`}
+											<VarDisplay raw={currentRaw} evaluated={current} setCopied={setCopied}/>
 										</ListGroup.Item>
 									);
 								})}
@@ -395,6 +498,7 @@ export default function Vars(props) {
 						</Card>
 					);
 				})}
+			<small>Copy by Derrick Snider from NounProject.com</small>
 		</Container>
 	);
 }
