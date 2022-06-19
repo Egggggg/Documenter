@@ -3,7 +3,6 @@ import { useLocation } from "react-router-dom";
 import { UserVars } from "uservars";
 import { get, set } from "lodash";
 
-import copy from "../img/copy.svg";
 import "../css/style.css";
 
 import { NotificationManager } from "react-notifications";
@@ -190,6 +189,7 @@ function ValueInput({
 				type="text"
 				placeholder={controlPlaceholder}
 			/>
+
 			<ToggleButtonGroup
 				type="radio"
 				value={get(newVal, `${valuePath}.type`, "literal")}
@@ -252,21 +252,21 @@ function useUserVars() {
 	return { rawVars, vars, setVar, current: userVars.current };
 }
 
-function VarDisplay({ raw, evaluated, setCopied }) {
+function VarDisplay({ raw, evaluated }) {
 	if (raw.varType === "basic") {
 		if (raw.value.type === "literal") {
 			return (
 				<>
-					<PathDisplay path={raw.name} setCopied={setCopied} />:{" "}
-					<ValueDisplay value={evaluated} setCopied={setCopied}>{evaluated}</ValueDisplay>
+					<PathDisplay path={raw.name} />:{" "}
+					<ValueDisplay value={evaluated}>{evaluated}</ValueDisplay>
 				</>
 			);
 		} else {
 			if (typeof evaluated === "string") {
 				return (
 					<>
-						<PathDisplay path={raw.name} setCopied={setCopied} />:{" "}
-						<ValueDisplay value={evaluated} setCopied={setCopied}>{raw.value.value} ({evaluated})</ValueDisplay>
+						<PathDisplay path={raw.name} />:{" "}
+						<ValueDisplay value={evaluated}>{raw.value.value} ({evaluated})</ValueDisplay>
 					</>
 				);
 			} else {
@@ -278,56 +278,22 @@ function VarDisplay({ raw, evaluated, setCopied }) {
 	}
 }
 
-function PathDisplay({ path, setCopied }) {
-	const [showCopy, setShowCopy] = useState(false);
-
+function PathDisplay({ path}) {
 	return (
 		<span
-			tabIndex={0}
-			onFocus={() => setShowCopy(true)}
-			onBlur={() => setShowCopy(false)}
 			className={"value-path"}
 		>
-			<img
-				src={copy}
-				className={"copy"}
-				onClick={() => copyPath(path, setCopied)}
-				hidden={!showCopy}
-				alt={"Copy"}
-			/>
-			{" "}{path}
+			{path}
 		</span>
 	);
 }
 
-function ValueDisplay({ evaluated, children, setCopied }) {
-	const [showCopy, setShowCopy] = useState(false);
-
+function ValueDisplay({ evaluated, children }) {
 	return (
-		<span
-			tabIndex={0}
-			onFocus={() => { setShowCopy(true)}}
-			onBlur={() => setShowCopy(false)}
-			className={"pe-5 value-path"}
-		>
+		<span className={"pe-5 value-path"}>
 			{children}{" "}
-			<img
-				src={copy}
-				className={"copy"}
-				onClick={() => copyValue(evaluated, setCopied)}
-				hidden={!showCopy}
-				alt={"Copy"}
-			/>
 		</span>
 	)
-}
-
-function copyPath(path, setCopied) {
-	setCopied({type: "path", value: path});
-}
-
-function copyValue(value, setCopied) {
-	setCopied({type: "value", value: value});
 }
 
 export default function Vars(props) {
@@ -335,7 +301,6 @@ export default function Vars(props) {
 	const [{ search }] = useState(useLocation());
 	const [newVal, setNewVal] = useState(structuredClone(defaultVals.basic));
 	const initialized = useRef(false);
-	let [copied, setCopied] = useState({});
 
 	useEffect(() => {
 		if (!initialized.current) {
@@ -490,7 +455,7 @@ export default function Vars(props) {
 												setNewVal(rawVar);
 											}}
 										>
-											<VarDisplay raw={currentRaw} evaluated={current} setCopied={setCopied}/>
+											<VarDisplay raw={currentRaw} evaluated={current} />
 										</ListGroup.Item>
 									);
 								})}
@@ -498,7 +463,6 @@ export default function Vars(props) {
 						</Card>
 					);
 				})}
-			<small>Copy by Derrick Snider from NounProject.com</small>
 		</Container>
 	);
 }
