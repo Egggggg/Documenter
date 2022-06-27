@@ -166,6 +166,48 @@ function submitVar(newValObject, setNewVal, userVars, db) {
 	};
 }
 
+function InlineExpressionInput({
+   newVal,
+   setNewVal,
+   controlPlaceholder,
+   valuePath,
+   idPrefix,
+   titleText
+}) {
+	return (
+		<Card className={"w-50 text-center"}>
+			<Form.Label>Sub-vars</Form.Label>
+			{Object.keys(get(newVal, valuePath, {})).map((key) => {
+				return (
+					<Container key={key} className={"w-25 float-start text-center"}>
+						<Form.Control
+							value={key}
+							onChange={(e) => {
+									const clone = structuredClone(newVal);
+
+									set(clone, `${valuePath}.value`, e.target.value);
+									setNewVal(clone);
+								}
+							}
+							type={"text"}
+							placeholder={"Sub-var Name"}
+						/>
+						<ValueInput
+							newVal={newVal}
+							setNewVal={setNewVal}
+							controlPlaceholder={"Subvar"}
+							valuePath={`${valuePath}.${key}`}
+							idPrefix={idPrefix}
+							titleText={"Sub-var"}
+							allowExpr={false}
+						/>
+					</Container>
+				)
+			}) || <></>}
+		</Card>
+	)
+}
+
 function ValueInput({
 	newVal,
 	setNewVal,
@@ -173,7 +215,7 @@ function ValueInput({
 	valuePath,
 	idPrefix,
 	titleText,
-	includeExpr = true
+	allowExpr = true
 }) {
 	return (
 		<Form.Group className="mb-3" controlId={`formVar${idPrefix}`}>
@@ -189,7 +231,17 @@ function ValueInput({
 				type="text"
 				placeholder={controlPlaceholder}
 			/>
-
+			{
+				get(newVal, `${valuePath}.type`, "literal") === "expression" &&
+				<InlineExpressionInput
+					newVal={newVal}
+					setNewVal={setNewVal}
+					controlPlaceholder={controlPlaceholder}
+					valuePath={`${valuePath}.vars`}
+					idPrefix={`${idPrefix}-inline`}
+					titleText={titleText}
+				/>
+			}
 			<ToggleButtonGroup
 				type="radio"
 				value={get(newVal, `${valuePath}.type`, "literal")}
@@ -222,7 +274,7 @@ function ValueInput({
 				>
 					Reference
 				</ToggleButton>
-				{includeExpr &&
+				{allowExpr &&
 					<ToggleButton
 						id={`${idPrefix}-type-expr`}
 						variant="outline-primary"
@@ -280,9 +332,7 @@ function VarDisplay({ raw, evaluated }) {
 
 function PathDisplay({ path}) {
 	return (
-		<span
-			className={"value-path"}
-		>
+		<span className={"value-path"}>
 			{path}
 		</span>
 	);
