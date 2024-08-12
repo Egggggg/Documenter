@@ -9,7 +9,7 @@
 			"url": "http://localhost:3000",
 			"pathMappings": [
 				{
-					"url": "file:///C:/Users/mrhum/Projects/Websites/Documenter/src",
+					"url": "file:///${workspaceFolder}/src",
 					"path": "${workspaceFolder}/src"
 				}
 			]

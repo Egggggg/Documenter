@@ -265,9 +265,9 @@ export default function List(props) {
 			<br />
 			{items.length === 0 && (
 				<h3>
-					There's nothing here yet! If you would like help, follow the{" "}
-					<NavLink to="/create?guide=c1">guide</NavLink>, or to just add a
-					document go to the <NavLink to="/create">create</NavLink> page
+					There's nothing here yet! Try{" "}
+					<NavLink to="/create?guide=c1">following the guide</NavLink> or{" "}
+					<NavLink to="/create">creating a document</NavLink>
 				</h3>
 			)}
 			{items.map((item) => {
